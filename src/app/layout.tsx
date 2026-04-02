@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   title: "GPAGA — Georgian Professional & Amateur Golf Association",
   description:
     "Growing the game of golf in Georgia. Tournaments, rankings, courses, and community.",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
   openGraph: {
     title: "GPAGA — Georgian Professional & Amateur Golf Association",
     description:
