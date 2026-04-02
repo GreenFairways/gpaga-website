@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  /* GPAGA Brand Colors */
+  --gpaga-green: oklch(0.72 0.15 128);
+  --gpaga-teal: oklch(0.30 0.05 220);
+  --gpaga-green-light: oklch(0.92 0.06 128);
+  --gpaga-green-dark: oklch(0.45 0.12 128);
+  --gpaga-teal-light: oklch(0.85 0.03 220);
+  --gpaga-teal-dark: oklch(0.22 0.04 220);
+
+  /* Semantic tokens */
+  --color-primary: var(--gpaga-green);
+  --color-primary-dark: var(--gpaga-green-dark);
+  --color-secondary: var(--gpaga-teal);
+  --color-secondary-light: var(--gpaga-teal-light);
+  --color-secondary-dark: var(--gpaga-teal-dark);
+  --color-accent: var(--gpaga-green-light);
+
+  /* Surface & text */
+  --background: oklch(0.99 0.005 128);
+  --foreground: var(--gpaga-teal);
+  --surface: oklch(0.97 0.008 128);
+  --surface-elevated: oklch(1 0 0);
+  --text-primary: var(--gpaga-teal);
+  --text-secondary: oklch(0.50 0.03 220);
+  --text-muted: oklch(0.62 0.02 220);
+  --border: oklch(0.90 0.02 128);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-secondary: var(--color-secondary);
+  --color-secondary-light: var(--color-secondary-light);
+  --color-accent: var(--color-accent);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border);
+  --font-sans: var(--font-outfit);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-outfit), system-ui, sans-serif;
+}
+
+/* Focus indicators for accessibility */
+:focus-visible {
+  outline: 2px solid var(--gpaga-green);
+  outline-offset: 2px;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
