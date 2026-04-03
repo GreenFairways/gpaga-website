@@ -52,11 +52,11 @@ export const courseInfos: CourseInfo[] = [
     email: "golf@tbilisihills.com",
     greenFees: {
       currency: "GEL",
-      note: "High season (Apr-Oct). Low season ~50% off. Juniors under 18: 50% off.",
+      note: "High season (Apr-Oct). Low season ~50% off. Juniors under 18: 50% off. Residents: 20% off.",
       rows: [
-        { label: "9 holes", weekday: "200", weekend: "160" },
-        { label: "18 holes", weekday: "320", weekend: "256" },
-        { label: "Daily fee", weekday: "480", weekend: "384" },
+        { label: "9 holes", weekday: "235", weekend: "250" },
+        { label: "18 holes", weekday: "350", weekend: "375" },
+        { label: "Daily fee", weekday: "470", weekend: "500" },
       ],
     },
     facilities: [
@@ -67,7 +67,7 @@ export const courseInfos: CourseInfo[] = [
       "Clubhouse & restaurant",
       "Pro shop",
       "Golf academy",
-      "Cart rental (125 GEL)",
+      "Buggy rental (90/140 GEL)",
       "Club rental",
     ],
     teeNames: ["Gold", "Silver", "White", "Green"],
