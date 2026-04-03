@@ -74,3 +74,23 @@ export async function PATCH(
 
   return Response.json(mapTournament(rows[0]));
 }
+
+/** DELETE /api/tournaments/[id] — delete tournament and all related data (admin only) */
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  if (!(await isAdmin())) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  // Delete in order: scores → registrations → teams → tournament
+  await sql`DELETE FROM scores WHERE registration_id IN (SELECT id FROM registrations WHERE tournament_id = ${id})`;
+  await sql`DELETE FROM registrations WHERE tournament_id = ${id}`;
+  await sql`DELETE FROM teams WHERE tournament_id = ${id}`;
+  await sql`DELETE FROM tournaments WHERE id = ${id}`;
+
+  return Response.json({ deleted: true });
+}

@@ -41,26 +41,35 @@ async function api(path: string, method = "GET", body?: unknown) {
 async function run() {
   console.log("=== Importing GPAGA Season Opening 2026, Round 2 ===\n");
 
-  // 1. Create tournament
+  // 0. Clean up failed attempts
+  const existing: any[] = await api("/api/tournaments");
+  for (const t of existing) {
+    if (t.name.includes("[DELETE]") || t.name === "Test Scramble 2-Ball") {
+      console.log(`Deleting: ${t.name}...`);
+      await api(`/api/tournaments/${t.id}`, "DELETE");
+    }
+  }
+
+  // 1. Create tournament with correct division format (hcpRange as array!)
   console.log("1. Creating tournament...");
   const divisions = [
     {
       label: "A", name: "Division A", format: "strokeplay", holes: 18,
-      hcpRange: { min: -8, max: 18 },
+      hcpRange: [-8, 18],
       tees: [{ gender: "M", teeName: "Silver" }, { gender: "F", teeName: "Green" }],
-      tieBreak: "handicap",
+      tieBreak: "lower-handicap",
     },
     {
       label: "B", name: "Division B", format: "stableford", holes: 18,
-      hcpRange: { min: 18.1, max: 36 },
+      hcpRange: [18.1, 36],
       tees: [{ gender: "M", teeName: "Silver" }, { gender: "F", teeName: "Green" }],
-      tieBreak: "handicap",
+      tieBreak: "lower-handicap",
     },
     {
       label: "C", name: "Division C", format: "stableford", holes: 9,
-      hcpRange: { min: 36.1, max: 54 },
+      hcpRange: [36.1, 54],
       tees: [{ gender: "M", teeName: "White" }, { gender: "F", teeName: "Green" }],
-      tieBreak: "handicap",
+      tieBreak: "lower-handicap",
     },
   ];
 
@@ -73,29 +82,36 @@ async function run() {
     format: "strokeplay",
     maxPlayers: 50,
     entryFeeLari: 0,
-    rules: "Division A: Net Strokeplay (HCP 0-18). Division B: Stableford (HCP 18.1-36). Division C: Stableford 9h (HCP 36.1-54). Tiebreak: lower handicap.",
+    rules: "Division A: Net Strokeplay (HCP 0-18, Silver/Green). Division B: Stableford (HCP 18.1-36, Silver/Green). Division C: Stableford 9h (HCP 36.1-54, White/Green). Tiebreak: lower handicap.",
     handicapAllowance: 1.0,
     divisions,
   });
   const tid = tournament.id;
   console.log(`   ID: ${tid}`);
 
-  // 2. Open registration + register players
+  // 2. Register players
   await api(`/api/tournaments/${tid}`, "PATCH", { status: "registration_open" });
   console.log("\n2. Registering players...");
 
   const players: any[] = await api("/api/players");
   const byAmgolf = new Map(players.filter((p: any) => p.amgolfPeopleId).map((p: any) => [p.amgolfPeopleId, p.id]));
 
-  const regMap = new Map<string, string>(); // amgolfPeopleId -> registrationId
+  const regMap = new Map<string, string>();
   let ok = 0, skip = 0;
 
   for (const sc of scorecards) {
     const playerId = byAmgolf.get(sc.peopleId);
-    if (!playerId) { console.log(`   ⚠ Not in DB: ${sc.name}`); skip++; continue; }
+    if (!playerId) { console.log(`   ⚠ Not in DB: ${sc.name} (${sc.peopleId})`); skip++; continue; }
     try {
       const reg = await api(`/api/tournaments/${tid}/register`, "POST", { playerId });
       regMap.set(sc.peopleId, reg.id);
+
+      // Log division + PH
+      const divMatch = reg.divisionLabel === (sc.hcp <= 18 ? "A" : sc.hcp <= 36 ? "B" : "C");
+      if (!divMatch) console.log(`   ⚠ Div mismatch: ${sc.name} HI=${sc.hcp} got div=${reg.divisionLabel}`);
+      if (Math.abs(reg.playingHandicap - sc.phcp) > 1) {
+        console.log(`   ⚠ PH diff: ${sc.name} ours=${reg.playingHandicap} amgolf=${sc.phcp} (HI=${sc.hcp})`);
+      }
       ok++;
     } catch (e: any) {
       console.log(`   ✗ ${sc.name}: ${e.message}`);
@@ -104,9 +120,9 @@ async function run() {
   }
   console.log(`   Registered: ${ok}, Skipped: ${skip}`);
 
-  // 3. Start tournament + bulk enter scores
+  // 3. Enter scores
   await api(`/api/tournaments/${tid}`, "PATCH", { status: "in_progress" });
-  console.log("\n3. Entering scores (bulk)...");
+  console.log("\n3. Entering scores...");
 
   const allScores: { registrationId: string; holeNumber: number; rawScore: number }[] = [];
   for (const sc of scorecards) {
@@ -118,38 +134,31 @@ async function run() {
     }
   }
 
-  console.log(`   Total score entries: ${allScores.length}`);
-
-  // Send in batches of 200 to avoid request size limits
   const BATCH = 200;
   let totalInserted = 0;
   for (let i = 0; i < allScores.length; i += BATCH) {
     const batch = allScores.slice(i, i + BATCH);
     const result = await api(`/api/tournaments/${tid}/scores`, "PUT", { scores: batch });
     totalInserted += result.inserted;
-    process.stderr.write(`   Batch ${Math.floor(i / BATCH) + 1}: ${result.inserted} inserted, ${result.errors} errors\n`);
   }
-  console.log(`   Total inserted: ${totalInserted}`);
+  console.log(`   Inserted: ${totalInserted}/${allScores.length}`);
 
-  // 4. Complete tournament
+  // 4. Complete
   await api(`/api/tournaments/${tid}`, "PATCH", { status: "completed" });
   console.log("\n4. Tournament completed!");
 
-  // 5. Verify leaderboard
+  // 5. Verify
   console.log("\n5. Leaderboard:");
   const lb = await api(`/api/tournaments/${tid}/leaderboard`);
-  if (Array.isArray(lb)) {
-    console.log(`   ${lb.length} entries`);
-    for (const e of lb.slice(0, 5)) {
-      console.log(`   #${e.position} ${e.playerName} — toPar: ${e.toPar}, net: ${e.netTotal}`);
-    }
-  } else {
-    for (const [div, entries] of Object.entries(lb)) {
-      const arr = entries as any[];
-      console.log(`   ${div} (${arr.length} players):`);
-      for (const e of arr.slice(0, 3)) {
-        const score = e.stablefordTotal != null ? `${e.stablefordTotal} pts` : `net ${e.netTotal}`;
-        console.log(`     #${e.position} ${e.playerName} — ${score}`);
+  if (lb.divisions) {
+    for (const divLb of lb.divisions) {
+      const d = divLb.division;
+      console.log(`\n   ${d.name} (${d.format}, ${d.holes}h):`);
+      for (const e of divLb.entries.slice(0, 5)) {
+        const score = d.format === "stableford"
+          ? `${e.stablefordTotal} pts`
+          : `net ${e.netTotal} (toPar ${e.toPar})`;
+        console.log(`     #${e.position}${e.tied ? "T" : ""} ${e.playerName} — ${score}`);
       }
     }
   }
