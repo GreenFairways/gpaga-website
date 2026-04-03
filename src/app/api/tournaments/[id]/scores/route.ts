@@ -112,3 +112,93 @@ export async function POST(
 
   return Response.json(mapScore(scoreRows[0]));
 }
+
+/**
+ * PUT /api/tournaments/[id]/scores — bulk enter scores (admin only)
+ *
+ * Body: { scores: [{ registrationId, holeNumber, rawScore }] }
+ *
+ * Processes all scores through the handicap engine and upserts in one go.
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+
+  if (!(await isAdmin())) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { scores } = body as {
+    scores: { registrationId: string; holeNumber: number; rawScore: number }[];
+  };
+
+  if (!scores || !Array.isArray(scores) || scores.length === 0) {
+    return Response.json({ error: "scores array required" }, { status: 400 });
+  }
+
+  // Get tournament format + course
+  const { rows: tRows } = await sql`
+    SELECT course_id, format FROM tournaments WHERE id = ${id}
+  `;
+  if (tRows.length === 0) {
+    return Response.json({ error: "Tournament not found" }, { status: 404 });
+  }
+  const { course_id, format } = tRows[0];
+
+  // Get all registrations for PH lookup
+  const { rows: regRows } = await sql`
+    SELECT id, playing_handicap FROM registrations WHERE tournament_id = ${id}
+  `;
+  const phByReg = new Map(
+    regRows.map((r) => [r.id, parseInt(r.playing_handicap) || 0]),
+  );
+
+  let inserted = 0;
+  let errors = 0;
+
+  for (const s of scores) {
+    if (
+      !s.registrationId ||
+      !s.holeNumber ||
+      s.rawScore == null ||
+      s.holeNumber < 1 ||
+      s.holeNumber > 18 ||
+      s.rawScore < 1 ||
+      s.rawScore > 20
+    ) {
+      errors++;
+      continue;
+    }
+
+    const ph = phByReg.get(s.registrationId);
+    if (ph == null) {
+      errors++;
+      continue;
+    }
+
+    const { adjustedScore, stablefordPoints } = processHoleScore(
+      s.holeNumber,
+      s.rawScore,
+      ph,
+      course_id,
+      format as TournamentFormat,
+    );
+
+    await sql`
+      INSERT INTO scores (registration_id, hole_number, raw_score, adjusted_score, stableford_points, entered_by)
+      VALUES (${s.registrationId}, ${s.holeNumber}, ${s.rawScore}, ${adjustedScore}, ${stablefordPoints}, ${"admin"})
+      ON CONFLICT (registration_id, hole_number) DO UPDATE SET
+        raw_score = EXCLUDED.raw_score,
+        adjusted_score = EXCLUDED.adjusted_score,
+        stableford_points = EXCLUDED.stableford_points,
+        entered_by = EXCLUDED.entered_by,
+        entered_at = NOW()
+    `;
+    inserted++;
+  }
+
+  return Response.json({ inserted, errors, total: scores.length });
+}
