@@ -36,7 +36,7 @@ export const courseInfos: CourseInfo[] = [
     slug: "tbilisi-hills",
     name: "Tbilisi Hills Golf Club",
     shortName: "Tbilisi Hills",
-    location: "36 Kosta Khetagurovi St, Kvemo Teleti",
+    location: "Kvemo Teleti",
     region: "Tbilisi",
     description:
       "Georgia's premier 18-hole championship course designed by Lassi Pekka Tilander. Set at the foot of the Caucasus Mountains, the undulating layout at 2,500 feet elevation offers dramatic views and a serious test of golf. A European Tour Destination and consistently ranked among Europe's top continental courses.",
