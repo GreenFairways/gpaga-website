@@ -4,6 +4,16 @@ import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Link from "next/link";
 
+interface Division {
+  label: string;
+  name: string;
+  format: string;
+  holes: number;
+  hcpRange: [number, number];
+  tees: { gender: string; teeName: string; seniorAge?: number }[];
+  tieBreak: string;
+}
+
 interface Tournament {
   id: string;
   name: string;
@@ -15,6 +25,7 @@ interface Tournament {
   maxPlayers: number;
   entryFeeLari: number;
   handicapAllowance: number;
+  divisions: Division[] | null;
 }
 
 const COURSES = [
@@ -22,9 +33,82 @@ const COURSES = [
   { id: "tabori-paragraph", name: "Tabori Paragraph" },
 ];
 
+const DIVISION_PRESETS: {
+  id: string;
+  name: string;
+  divisions: Division[];
+}[] = [
+  {
+    id: "tbilisi-hills",
+    name: "Tbilisi Hills Standard (A/B/C)",
+    divisions: [
+      {
+        label: "A",
+        name: "Division A",
+        format: "strokeplay",
+        holes: 18,
+        hcpRange: [0, 18],
+        tees: [
+          { gender: "M", teeName: "Silver" },
+          { gender: "F", teeName: "Green" },
+        ],
+        tieBreak: "lower-handicap",
+      },
+      {
+        label: "B",
+        name: "Division B",
+        format: "stableford",
+        holes: 18,
+        hcpRange: [18.1, 36],
+        tees: [
+          { gender: "M", teeName: "Silver" },
+          { gender: "F", teeName: "Green" },
+        ],
+        tieBreak: "lower-handicap",
+      },
+      {
+        label: "C",
+        name: "Division C",
+        format: "stableford",
+        holes: 9,
+        hcpRange: [36.1, 54],
+        tees: [
+          { gender: "M", teeName: "White" },
+          { gender: "F", teeName: "Green" },
+        ],
+        tieBreak: "lower-handicap",
+      },
+    ],
+  },
+  {
+    id: "single-stableford",
+    name: "Single Division (Stableford)",
+    divisions: [
+      {
+        label: "A",
+        name: "Open",
+        format: "stableford",
+        holes: 18,
+        hcpRange: [0, 54],
+        tees: [
+          { gender: "M", teeName: "Silver" },
+          { gender: "F", teeName: "Green" },
+        ],
+        tieBreak: "lower-handicap",
+      },
+    ],
+  },
+  {
+    id: "none",
+    name: "No divisions (legacy single format)",
+    divisions: [],
+  },
+];
+
 export default function AdminTournamentsPage() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState("tbilisi-hills");
   const [form, setForm] = useState({
     name: "",
     date: "",
@@ -50,10 +134,13 @@ export default function AdminTournamentsPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
+    const preset = DIVISION_PRESETS.find((p) => p.id === selectedPreset);
+    const divisions =
+      preset && preset.divisions.length > 0 ? preset.divisions : null;
     const res = await fetch("/api/tournaments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, divisions }),
     });
     if (res.ok) {
       setShowCreate(false);
@@ -136,23 +223,40 @@ export default function AdminTournamentsPage() {
                   ))}
                 </select>
                 <select
-                  value={form.format}
-                  onChange={(e) => setForm({ ...form, format: e.target.value })}
-                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                  value={selectedPreset}
+                  onChange={(e) => setSelectedPreset(e.target.value)}
+                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm sm:col-span-2"
                 >
-                  <option value="strokeplay">Strokeplay</option>
-                  <option value="stableford">Stableford</option>
-                  <option value="matchplay">Match Play</option>
+                  {DIVISION_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
                 </select>
-                <input
-                  type="text"
-                  placeholder="Tee Name (e.g. Silver)"
-                  value={form.teeName}
-                  onChange={(e) =>
-                    setForm({ ...form, teeName: e.target.value })
-                  }
-                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-                />
+                {selectedPreset === "none" && (
+                  <>
+                    <select
+                      value={form.format}
+                      onChange={(e) =>
+                        setForm({ ...form, format: e.target.value })
+                      }
+                      className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                    >
+                      <option value="strokeplay">Strokeplay</option>
+                      <option value="stableford">Stableford</option>
+                      <option value="matchplay">Match Play</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Tee Name (e.g. Silver)"
+                      value={form.teeName}
+                      onChange={(e) =>
+                        setForm({ ...form, teeName: e.target.value })
+                      }
+                      className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                    />
+                  </>
+                )}
                 <input
                   type="number"
                   placeholder="Max Players"
@@ -182,6 +286,41 @@ export default function AdminTournamentsPage() {
                   rows={3}
                 />
               </div>
+              {/* Division preview */}
+              {selectedPreset !== "none" && (
+                <div className="mt-4 rounded-xl border border-border bg-accent p-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                    Divisions
+                  </h3>
+                  <div className="mt-2 space-y-2">
+                    {DIVISION_PRESETS.find(
+                      (p) => p.id === selectedPreset,
+                    )?.divisions.map((d) => (
+                      <div
+                        key={d.label}
+                        className="flex items-center justify-between rounded-lg bg-surface px-3 py-2 text-sm"
+                      >
+                        <div>
+                          <span className="font-semibold text-secondary">
+                            {d.name}
+                          </span>
+                          <span className="ml-2 text-text-muted">
+                            {d.format === "strokeplay"
+                              ? "Net Strokeplay"
+                              : "Stableford"}{" "}
+                            &middot; {d.holes}h
+                          </span>
+                        </div>
+                        <div className="text-xs text-text-muted">
+                          HCP {d.hcpRange[0]}-{d.hcpRange[1]} &middot;{" "}
+                          {d.tees.map((t) => `${t.gender}: ${t.teeName}`).join(", ")}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={creating}
@@ -208,7 +347,10 @@ export default function AdminTournamentsPage() {
                   </Link>
                   <p className="mt-1 text-sm text-text-muted">
                     {t.date} &middot;{" "}
-                    {t.courseId.replace(/-/g, " ")} &middot; {t.format}
+                    {t.courseId.replace(/-/g, " ")}
+                    {t.divisions && t.divisions.length > 0
+                      ? ` \u00b7 ${t.divisions.map((d) => d.label).join("/")}`
+                      : ` \u00b7 ${t.format}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

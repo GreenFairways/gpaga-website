@@ -9,6 +9,7 @@ import type {
   RegistrationWithPlayer,
   TournamentScore,
   FlightConfig,
+  Division,
 } from "../tournament/types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -28,6 +29,7 @@ export function mapTournament(row: any): Tournament {
     rules: row.rules || "",
     handicapAllowance: parseFloat(row.handicap_allowance) || 0.95,
     flightConfig: row.flight_config as FlightConfig | null,
+    divisions: row.divisions as Division[] | null,
     createdAt: row.created_at?.toISOString?.() || row.created_at,
     updatedAt: row.updated_at?.toISOString?.() || row.updated_at,
   };
@@ -58,6 +60,7 @@ export function mapRegistration(row: any): Registration {
     handicapIndexAtReg: row.handicap_index_at_reg != null ? parseFloat(row.handicap_index_at_reg) : null,
     courseHandicap: row.course_handicap != null ? parseInt(row.course_handicap) : null,
     playingHandicap: row.playing_handicap != null ? parseInt(row.playing_handicap) : null,
+    divisionLabel: row.division_label || null,
     flightNumber: row.flight_number,
     groupNumber: row.group_number,
     teeTime: row.tee_time || null,

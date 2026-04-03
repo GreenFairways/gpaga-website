@@ -26,6 +26,7 @@ export interface Tournament {
   rules: string; // markdown
   handicapAllowance: number; // e.g. 0.95 for 95%
   flightConfig: FlightConfig | null;
+  divisions: Division[] | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -36,6 +37,31 @@ export interface FlightConfig {
   count: number;
   /** For manual mode: custom boundaries e.g. [[0,12],[13,24],[25,54]] */
   boundaries?: [number, number][];
+}
+
+// ──── Division ────
+
+export interface Division {
+  /** e.g. "A", "B", "C" */
+  label: string;
+  /** Display name e.g. "Division A" */
+  name: string;
+  format: TournamentFormat;
+  /** Number of holes: 18 or 9 */
+  holes: 18 | 9;
+  /** HCP range [min, max] inclusive */
+  hcpRange: [number, number];
+  /** Tee box assignment rules */
+  tees: DivisionTeeRule[];
+  /** Tie-break rule */
+  tieBreak: "lower-handicap" | "countback";
+}
+
+export interface DivisionTeeRule {
+  gender: "M" | "F" | "any";
+  /** Optional: age threshold for senior tee */
+  seniorAge?: number;
+  teeName: string;
 }
 
 // ──── Player ────
@@ -70,6 +96,7 @@ export interface Registration {
   handicapIndexAtReg: number | null;
   courseHandicap: number | null;
   playingHandicap: number | null;
+  divisionLabel: string | null;
   flightNumber: number | null;
   groupNumber: number | null;
   teeTime: string | null; // "08:30"

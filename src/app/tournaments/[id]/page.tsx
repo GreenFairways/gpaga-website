@@ -6,6 +6,16 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import { use } from "react";
 
+interface DivisionDef {
+  label: string;
+  name: string;
+  format: string;
+  holes: number;
+  hcpRange: [number, number];
+  tees: { gender: string; teeName: string }[];
+  tieBreak: string;
+}
+
 interface Tournament {
   id: string;
   name: string;
@@ -18,6 +28,7 @@ interface Tournament {
   entryFeeLari: number;
   rules: string;
   handicapAllowance: number;
+  divisions: DivisionDef[] | null;
 }
 
 interface Registration {
@@ -26,6 +37,7 @@ interface Registration {
   lastName: string;
   handicapIndexAtReg: number | null;
   playingHandicap: number | null;
+  divisionLabel: string | null;
   flightNumber: number | null;
   groupNumber: number | null;
   teeTime: string | null;
@@ -168,9 +180,17 @@ export default function TournamentDetailPage({
 
                 {/* Details */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <InfoCard label="Format" value={FORMAT_LABELS[tournament.format] || tournament.format} />
+                  <InfoCard label="Format" value={
+                    tournament.divisions && tournament.divisions.length > 0
+                      ? `${tournament.divisions.length} Divisions`
+                      : FORMAT_LABELS[tournament.format] || tournament.format
+                  } />
                   <InfoCard label="Course" value={tournament.courseId.replace(/-/g, " ")} />
-                  <InfoCard label="Tees" value={tournament.teeName} />
+                  <InfoCard label="Tees" value={
+                    tournament.divisions && tournament.divisions.length > 0
+                      ? tournament.divisions.flatMap(d => d.tees.map(t => t.teeName)).filter((v, i, a) => a.indexOf(v) === i).join(" / ")
+                      : tournament.teeName
+                  } />
                   <InfoCard
                     label="Entry Fee"
                     value={
@@ -180,6 +200,40 @@ export default function TournamentDetailPage({
                     }
                   />
                 </div>
+
+                {/* Division cards */}
+                {tournament.divisions && tournament.divisions.length > 0 && (
+                  <div className="rounded-2xl border border-border bg-surface-elevated p-6">
+                    <h3 className="font-semibold text-secondary">Divisions</h3>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      {tournament.divisions.map((d) => (
+                        <div
+                          key={d.label}
+                          className="rounded-xl border border-border bg-accent p-4"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                              {d.label}
+                            </span>
+                            <span className="font-semibold text-secondary">
+                              {d.name}
+                            </span>
+                          </div>
+                          <div className="mt-3 space-y-1 text-sm text-text-secondary">
+                            <p>
+                              {d.format === "strokeplay" ? "Net Strokeplay" : "Stableford"}{" "}
+                              &middot; {d.holes} holes
+                            </p>
+                            <p>HCP {d.hcpRange[0]} - {d.hcpRange[1]}</p>
+                            <p className="text-xs text-text-muted">
+                              {d.tees.map((t) => `${t.gender === "M" ? "Men" : "Women"}: ${t.teeName}`).join(", ")}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Registration status */}
                 {tournament.status === "registration_open" && (
@@ -252,6 +306,7 @@ function ParticipantsTable({
             <th className="px-4 py-3 font-medium text-text-muted">
               Playing HCP
             </th>
+            <th className="px-4 py-3 font-medium text-text-muted">Div</th>
             <th className="px-4 py-3 font-medium text-text-muted">Flight</th>
             <th className="px-4 py-3 font-medium text-text-muted">Status</th>
           </tr>
@@ -273,6 +328,13 @@ function ParticipantsTable({
               </td>
               <td className="px-4 py-3">
                 {r.playingHandicap != null ? r.playingHandicap : "N/A"}
+              </td>
+              <td className="px-4 py-3">
+                {r.divisionLabel ? (
+                  <span className="rounded-md bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                    {r.divisionLabel}
+                  </span>
+                ) : "-"}
               </td>
               <td className="px-4 py-3">
                 {r.flightNumber != null ? `Flight ${String.fromCharCode(64 + r.flightNumber)}` : "-"}
@@ -388,6 +450,11 @@ interface LeaderboardEntryType {
   thru: number;
 }
 
+interface DivisionLeaderboard {
+  division: DivisionDef;
+  entries: LeaderboardEntryType[];
+}
+
 function LeaderboardView({
   tournamentId,
   format,
@@ -395,7 +462,9 @@ function LeaderboardView({
   tournamentId: string;
   format: string;
 }) {
-  const [entries, setEntries] = useState<LeaderboardEntryType[]>([]);
+  const [entries, setEntries] = useState<LeaderboardEntryType[] | null>(null);
+  const [divisionBoards, setDivisionBoards] = useState<DivisionLeaderboard[] | null>(null);
+  const [activeDivision, setActiveDivision] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -403,27 +472,94 @@ function LeaderboardView({
       const res = await fetch(`/api/tournaments/${tournamentId}/leaderboard`);
       if (res.ok) {
         const data = await res.json();
-        setEntries(data.entries);
+        if (data.divisions) {
+          setDivisionBoards(data.divisions);
+          setEntries(null);
+          if (!activeDivision && data.divisions.length > 0) {
+            setActiveDivision(data.divisions[0].division.label);
+          }
+        } else {
+          setEntries(data.entries);
+          setDivisionBoards(null);
+        }
       }
       setLoading(false);
     }
 
     fetchLeaderboard();
-    // Poll every 15 seconds for live updates
     const interval = setInterval(fetchLeaderboard, 15000);
     return () => clearInterval(interval);
-  }, [tournamentId]);
+  }, [tournamentId, activeDivision]);
 
   if (loading) {
     return <p className="text-text-muted">Loading leaderboard...</p>;
   }
 
-  if (entries.length === 0) {
+  // Per-division leaderboard
+  if (divisionBoards) {
+    const activeBoard = divisionBoards.find(
+      (db) => db.division.label === activeDivision,
+    );
+
+    return (
+      <div className="space-y-4">
+        {/* Division tabs */}
+        <div className="flex gap-1 rounded-xl bg-accent p-1">
+          {divisionBoards.map((db) => (
+            <button
+              key={db.division.label}
+              onClick={() => setActiveDivision(db.division.label)}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                activeDivision === db.division.label
+                  ? "bg-surface-elevated text-secondary shadow-sm"
+                  : "text-text-muted hover:text-secondary"
+              }`}
+            >
+              {db.division.name}
+              <span className="ml-1 text-xs text-text-muted">
+                ({db.division.format === "strokeplay" ? "Net" : "Stableford"}
+                {db.division.holes === 9 ? " 9h" : ""})
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {activeBoard && activeBoard.entries.length > 0 ? (
+          <LeaderboardTable
+            entries={activeBoard.entries}
+            isStableford={activeBoard.division.format === "stableford"}
+            holes={activeBoard.division.holes}
+          />
+        ) : (
+          <p className="text-text-muted">No scores entered yet for this division.</p>
+        )}
+      </div>
+    );
+  }
+
+  // Legacy single leaderboard
+  if (!entries || entries.length === 0) {
     return <p className="text-text-muted">No scores entered yet.</p>;
   }
 
-  const isStableford = format === "stableford";
+  return (
+    <LeaderboardTable
+      entries={entries}
+      isStableford={format === "stableford"}
+      holes={18}
+    />
+  );
+}
 
+function LeaderboardTable({
+  entries,
+  isStableford,
+  holes,
+}: {
+  entries: LeaderboardEntryType[];
+  isStableford: boolean;
+  holes: number;
+}) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-border">
       <table className="w-full text-sm">
@@ -438,13 +574,9 @@ function LeaderboardView({
               <th className="px-4 py-3 font-medium text-text-muted">Points</th>
             ) : (
               <>
-                <th className="px-4 py-3 font-medium text-text-muted">
-                  Gross
-                </th>
+                <th className="px-4 py-3 font-medium text-text-muted">Gross</th>
                 <th className="px-4 py-3 font-medium text-text-muted">Net</th>
-                <th className="px-4 py-3 font-medium text-text-muted">
-                  To Par
-                </th>
+                <th className="px-4 py-3 font-medium text-text-muted">To Par</th>
               </>
             )}
             <th className="px-4 py-3 font-medium text-text-muted">Thru</th>
@@ -485,7 +617,7 @@ function LeaderboardView({
                 </>
               )}
               <td className="px-4 py-3 text-text-muted">
-                {e.thru === 18 ? "F" : e.thru}
+                {e.thru === holes ? "F" : e.thru}
               </td>
             </tr>
           ))}

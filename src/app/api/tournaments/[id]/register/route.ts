@@ -7,6 +7,8 @@ import {
   calcRegistrationHandicap,
 } from "@/lib/tournament/registration";
 import { getPlayer as getAmGolfPlayer } from "@/lib/amgolf";
+import { assignDivision, getTeeForPlayer } from "@/lib/tournament/divisions";
+import type { Division } from "@/lib/tournament/types";
 
 /**
  * POST /api/tournaments/[id]/register
@@ -117,12 +119,24 @@ export async function POST(
     }
   }
 
-  // 6. Calculate handicap
+  // 6. Assign division + calculate handicap
   const hi = player.handicap_index != null ? parseFloat(player.handicap_index) : null;
+  const divisions = (tournament.divisions as Division[]) || null;
+  let divisionLabel: string | null = null;
+  let teeName = tournament.tee_name;
+
+  if (divisions && divisions.length > 0 && hi != null) {
+    const div = assignDivision(divisions, hi);
+    if (div) {
+      divisionLabel = div.label;
+      teeName = getTeeForPlayer(div, player.gender);
+    }
+  }
+
   const { courseHandicap, playingHandicap } = calcRegistrationHandicap(
     hi,
     tournament.course_id,
-    tournament.tee_name,
+    teeName,
     player.gender,
     parseFloat(tournament.handicap_allowance),
   );
@@ -130,8 +144,8 @@ export async function POST(
   // 7. Create registration
   const accessCode = generateAccessCode();
   const { rows: regRows } = await sql`
-    INSERT INTO registrations (tournament_id, player_id, handicap_index_at_reg, course_handicap, playing_handicap, access_code)
-    VALUES (${tournamentId}, ${resolvedPlayerId}, ${hi}, ${courseHandicap}, ${playingHandicap}, ${accessCode})
+    INSERT INTO registrations (tournament_id, player_id, handicap_index_at_reg, course_handicap, playing_handicap, division_label, access_code)
+    VALUES (${tournamentId}, ${resolvedPlayerId}, ${hi}, ${courseHandicap}, ${playingHandicap}, ${divisionLabel}, ${accessCode})
     RETURNING *
   `;
 
@@ -139,6 +153,7 @@ export async function POST(
     {
       ...mapRegistration(regRows[0]),
       playerName: `${player.first_name} ${player.last_name}`,
+      divisionLabel,
       accessCode,
     },
     { status: 201 },

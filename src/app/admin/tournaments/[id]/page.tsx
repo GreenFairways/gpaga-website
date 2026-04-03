@@ -12,6 +12,7 @@ interface Registration {
   email: string;
   handicapIndexAtReg: number | null;
   playingHandicap: number | null;
+  divisionLabel: string | null;
   flightNumber: number | null;
   groupNumber: number | null;
   teeTime: string | null;
@@ -469,6 +470,9 @@ export default function AdminTournamentDetailPage({
                       Playing
                     </th>
                     <th className="px-4 py-3 font-medium text-text-muted">
+                      Div
+                    </th>
+                    <th className="px-4 py-3 font-medium text-text-muted">
                       Flight
                     </th>
                     <th className="px-4 py-3 font-medium text-text-muted">
@@ -494,6 +498,15 @@ export default function AdminTournamentDetailPage({
                         {r.handicapIndexAtReg?.toFixed(1) ?? "-"}
                       </td>
                       <td className="px-4 py-3">{r.playingHandicap ?? "-"}</td>
+                      <td className="px-4 py-3">
+                        {r.divisionLabel ? (
+                          <span className="rounded-md bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                            {r.divisionLabel}
+                          </span>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         {r.flightNumber
                           ? String.fromCharCode(64 + r.flightNumber)

@@ -48,6 +48,7 @@ export async function initDatabase(): Promise<void> {
       rules TEXT DEFAULT '',
       handicap_allowance DECIMAL(3,2) DEFAULT 0.95,
       flight_config JSONB,
+      divisions JSONB,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
@@ -62,6 +63,7 @@ export async function initDatabase(): Promise<void> {
       handicap_index_at_reg DECIMAL(4,1),
       course_handicap INT,
       playing_handicap INT,
+      division_label VARCHAR(10),
       flight_number INT,
       group_number INT,
       tee_time TIME,
@@ -83,6 +85,20 @@ export async function initDatabase(): Promise<void> {
       entered_at TIMESTAMPTZ DEFAULT NOW(),
       UNIQUE(registration_id, hole_number)
     )
+  `;
+
+  // Migrations for existing tables
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS divisions JSONB;
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `;
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE registrations ADD COLUMN IF NOT EXISTS division_label VARCHAR(10);
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
   `;
 
   // Indexes
