@@ -1,14 +1,22 @@
 import type { NextRequest } from "next/server";
-import { sql } from "@/lib/db";
+import { sql, initDatabase } from "@/lib/db";
 import { isAdmin } from "@/lib/auth/session";
 import { mapTeam } from "@/lib/db/mappers";
-import { calcScrambleTeamHandicap } from "@/lib/scoring/strategies/scramble";
+
+let dbInitialized = false;
+async function ensureDb() {
+  if (!dbInitialized) {
+    await initDatabase();
+    dbInitialized = true;
+  }
+}
 
 /** GET /api/tournaments/[id]/teams — list teams with members */
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  await ensureDb();
   const { id } = await params;
 
   const { rows: teamRows } = await sql`
@@ -61,6 +69,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  await ensureDb();
   if (!(await isAdmin())) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
