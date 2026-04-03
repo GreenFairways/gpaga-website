@@ -53,7 +53,8 @@ describe("processHoleScore", () => {
     // Playing HCP 10: strokes on hole depends on SI
     // Score should be capped at NDB
     expect(result.adjustedScore).toBeLessThanOrEqual(10);
-    expect(result.stablefordPoints).toBeNull();
+    // Stableford points are always computed (needed for multi-division tournaments)
+    expect(typeof result.stablefordPoints).toBe("number");
   });
 
   it("returns stableford points for stableford format", () => {

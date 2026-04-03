@@ -42,15 +42,11 @@ export function processHoleScore(
   const ndb = calcNetDoubleBogey(hole.par, strokes);
   const adjustedScore = Math.min(rawScore, ndb);
 
-  let stablefordPoints: number | null = null;
-  if (format === "stableford") {
-    // Stableford: points based on net score vs par
-    // Net score = raw score - strokes received on this hole
-    const netScore = rawScore - strokes;
-    const diff = hole.par - netScore;
-    // +2 baseline: par = 2 points, birdie = 3, eagle = 4, bogey = 1, double+ = 0
-    stablefordPoints = Math.max(0, diff + 2);
-  }
+  // Always compute stableford points — needed for multi-division tournaments
+  // where some divisions use stableford even if the base format is strokeplay
+  const netScore = rawScore - strokes;
+  const diff = hole.par - netScore;
+  const stablefordPoints = Math.max(0, diff + 2);
 
   return { adjustedScore, stablefordPoints };
 }

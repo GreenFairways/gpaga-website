@@ -139,21 +139,25 @@ export async function PUT(
     return Response.json({ error: "scores array required" }, { status: 400 });
   }
 
-  // Get tournament format + course
+  // Get tournament details + divisions
   const { rows: tRows } = await sql`
-    SELECT course_id, format FROM tournaments WHERE id = ${id}
+    SELECT course_id, format, divisions FROM tournaments WHERE id = ${id}
   `;
   if (tRows.length === 0) {
     return Response.json({ error: "Tournament not found" }, { status: 404 });
   }
-  const { course_id, format } = tRows[0];
+  const { course_id, format, divisions: rawDivisions } = tRows[0];
+  const divisions = rawDivisions as { label: string; format: string }[] | null;
 
-  // Get all registrations for PH lookup
+  // Get all registrations for PH + division lookup
   const { rows: regRows } = await sql`
-    SELECT id, playing_handicap FROM registrations WHERE tournament_id = ${id}
+    SELECT id, playing_handicap, division_label FROM registrations WHERE tournament_id = ${id}
   `;
-  const phByReg = new Map(
-    regRows.map((r) => [r.id, parseInt(r.playing_handicap) || 0]),
+  const regInfo = new Map(
+    regRows.map((r) => [r.id, {
+      ph: parseInt(r.playing_handicap) || 0,
+      divLabel: r.division_label as string | null,
+    }]),
   );
 
   let inserted = 0;
@@ -173,18 +177,25 @@ export async function PUT(
       continue;
     }
 
-    const ph = phByReg.get(s.registrationId);
-    if (ph == null) {
+    const info = regInfo.get(s.registrationId);
+    if (!info) {
       errors++;
       continue;
+    }
+
+    // Use division format if available, otherwise tournament base format
+    let scoreFormat = format as TournamentFormat;
+    if (divisions && info.divLabel) {
+      const div = divisions.find((d) => d.label === info.divLabel);
+      if (div) scoreFormat = div.format as TournamentFormat;
     }
 
     const { adjustedScore, stablefordPoints } = processHoleScore(
       s.holeNumber,
       s.rawScore,
-      ph,
+      info.ph,
       course_id,
-      format as TournamentFormat,
+      scoreFormat,
     );
 
     await sql`
