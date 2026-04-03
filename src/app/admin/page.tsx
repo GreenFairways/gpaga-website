@@ -117,6 +117,12 @@ export default function AdminPage() {
                 </button>
               )}
               <Link
+                href="/admin/players"
+                className="rounded-lg bg-secondary px-4 py-2 text-sm font-medium text-white hover:bg-secondary/90"
+              >
+                Manage Players
+              </Link>
+              <Link
                 href="/admin/tournaments"
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
               >

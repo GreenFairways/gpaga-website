@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { sql } from "@/lib/db";
+import { isAdmin } from "@/lib/auth/session";
 import { mapPlayer } from "@/lib/db/mappers";
 
 /** GET /api/players/[id] — get player details with tournament history */
@@ -42,4 +43,51 @@ export async function GET(
       registrationStatus: h.registration_status,
     })),
   });
+}
+
+/** PATCH /api/players/[id] — update player fields (admin only) */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  if (!(await isAdmin())) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const body = await request.json();
+
+  const { rows: existing } = await sql`SELECT * FROM players WHERE id = ${id}`;
+  if (existing.length === 0) {
+    return Response.json({ error: "Player not found" }, { status: 404 });
+  }
+
+  const {
+    firstName,
+    lastName,
+    email,
+    phone,
+    gender,
+    handicapIndex,
+    handicapSource,
+    homeClub,
+    amgolfPeopleId,
+  } = body;
+
+  const { rows } = await sql`
+    UPDATE players SET
+      first_name = COALESCE(${firstName ?? null}, first_name),
+      last_name = COALESCE(${lastName ?? null}, last_name),
+      email = COALESCE(${email ?? null}, email),
+      phone = COALESCE(${phone ?? null}, phone),
+      gender = COALESCE(${gender ?? null}, gender),
+      handicap_index = COALESCE(${handicapIndex ?? null}, handicap_index),
+      handicap_source = COALESCE(${handicapSource ?? null}, handicap_source),
+      home_club = COALESCE(${homeClub ?? null}, home_club),
+      amgolf_people_id = COALESCE(${amgolfPeopleId ?? null}, amgolf_people_id)
+    WHERE id = ${id}
+    RETURNING *
+  `;
+
+  return Response.json(mapPlayer(rows[0]));
 }

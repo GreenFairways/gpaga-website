@@ -6,6 +6,7 @@ import {
   generateAccessCode,
   calcRegistrationHandicap,
 } from "@/lib/tournament/registration";
+import { getPlayer as getAmGolfPlayer } from "@/lib/amgolf";
 
 /**
  * POST /api/tournaments/[id]/register
@@ -94,6 +95,26 @@ export async function POST(
       { error: "Player is already registered for this tournament" },
       { status: 409 },
     );
+  }
+
+  // 5b. Auto-refresh HI from AmGolf if linked
+  if (player.amgolf_people_id) {
+    try {
+      const amgolf = await getAmGolfPlayer(player.amgolf_people_id);
+      if (amgolf.exactHandicap != null) {
+        const freshHI = amgolf.exactHandicap;
+        const storedHI = player.handicap_index != null ? parseFloat(player.handicap_index) : null;
+        if (freshHI !== storedHI) {
+          await sql`
+            UPDATE players SET handicap_index = ${freshHI}, handicap_source = 'amgolf'
+            WHERE id = ${resolvedPlayerId}
+          `;
+          player.handicap_index = freshHI;
+        }
+      }
+    } catch {
+      // AmGolf API failure should not block registration
+    }
   }
 
   // 6. Calculate handicap

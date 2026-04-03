@@ -48,8 +48,9 @@ export interface Player {
   phone: string | null;
   gender: "M" | "F";
   handicapIndex: number | null;
-  handicapSource: "gpaga" | "manual" | "foreign";
+  handicapSource: "gpaga" | "manual" | "amgolf" | "foreign";
   homeClub: string | null;
+  amgolfPeopleId: string | null;
   createdAt: string;
 }
 

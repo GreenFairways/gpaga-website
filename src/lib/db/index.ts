@@ -20,8 +20,17 @@ export async function initDatabase(): Promise<void> {
       handicap_index DECIMAL(4,1),
       handicap_source VARCHAR(10) DEFAULT 'manual',
       home_club VARCHAR(200),
+      amgolf_people_id VARCHAR(30),
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
+  `;
+
+  // Add amgolf_people_id to existing tables (idempotent)
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE players ADD COLUMN IF NOT EXISTS amgolf_people_id VARCHAR(30);
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
   `;
 
   await sql`
@@ -82,4 +91,5 @@ export async function initDatabase(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_scores_registration ON scores(registration_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_tournaments_status ON tournaments(status)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_tournaments_date ON tournaments(date)`;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_players_amgolf_id ON players(amgolf_people_id) WHERE amgolf_people_id IS NOT NULL`;
 }

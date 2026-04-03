@@ -44,6 +44,7 @@ export function mapPlayer(row: any): Player {
     handicapIndex: row.handicap_index != null ? parseFloat(row.handicap_index) : null,
     handicapSource: row.handicap_source || "manual",
     homeClub: row.home_club || null,
+    amgolfPeopleId: row.amgolf_people_id || null,
     createdAt: row.created_at?.toISOString?.() || row.created_at,
   };
 }
