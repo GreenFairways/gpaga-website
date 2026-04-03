@@ -18,6 +18,15 @@ interface Registration {
   status: string;
 }
 
+interface Player {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  handicapIndex: number | null;
+  gender: string;
+}
+
 interface Tournament {
   id: string;
   name: string;
@@ -36,17 +45,32 @@ export default function AdminTournamentDetailPage({
   const { id } = use(params);
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [pairingMsg, setPairingMsg] = useState("");
   const [startTime, setStartTime] = useState("08:00");
   const [interval, setInterval_] = useState(10);
+  const [showAddPlayer, setShowAddPlayer] = useState(false);
+  const [playerSearch, setPlayerSearch] = useState("");
+  const [regMsg, setRegMsg] = useState("");
+  const [showNewPlayer, setShowNewPlayer] = useState(false);
+  const [newPlayer, setNewPlayer] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    gender: "M",
+    handicapIndex: "",
+    phone: "",
+  });
 
   const load = useCallback(async () => {
-    const [tRes, rRes] = await Promise.all([
+    const [tRes, rRes, pRes] = await Promise.all([
       fetch(`/api/tournaments/${id}`),
       fetch(`/api/tournaments/${id}/registrations`),
+      fetch(`/api/players`),
     ]);
     if (tRes.ok) setTournament(await tRes.json());
     if (rRes.ok) setRegistrations(await rRes.json());
+    if (pRes.ok) setPlayers(await pRes.json());
   }, [id]);
 
   useEffect(() => {
@@ -155,6 +179,270 @@ export default function AdminTournamentDetailPage({
             </div>
             {pairingMsg && (
               <p className="mt-3 text-sm text-text-secondary">{pairingMsg}</p>
+            )}
+          </div>
+
+          {/* Add Player */}
+          <div className="mt-8 rounded-2xl border border-border bg-surface-elevated p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-secondary">
+                Register Players
+              </h2>
+              <button
+                onClick={() => setShowAddPlayer(!showAddPlayer)}
+                className="text-sm text-primary hover:underline"
+              >
+                {showAddPlayer ? "Close" : "+ Add Player"}
+              </button>
+            </div>
+
+            {regMsg && (
+              <p className="mt-3 text-sm text-green-600">{regMsg}</p>
+            )}
+
+            {showAddPlayer && (
+              <div className="mt-4">
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={playerSearch}
+                  onChange={(e) => setPlayerSearch(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                />
+
+                {playerSearch.length >= 2 && (
+                  <div className="mt-2 max-h-60 overflow-y-auto rounded-lg border border-border">
+                    {players
+                      .filter((p) => {
+                        const q = playerSearch.toLowerCase();
+                        const alreadyRegistered = registrations.some(
+                          (r) =>
+                            r.email === p.email && r.status !== "withdrawn",
+                        );
+                        return (
+                          !alreadyRegistered &&
+                          (`${p.firstName} ${p.lastName}`
+                            .toLowerCase()
+                            .includes(q) ||
+                            p.email.toLowerCase().includes(q))
+                        );
+                      })
+                      .slice(0, 10)
+                      .map((p) => (
+                        <div
+                          key={p.id}
+                          className="flex items-center justify-between border-b border-border px-4 py-2 last:border-0"
+                        >
+                          <div>
+                            <span className="font-medium text-secondary">
+                              {p.firstName} {p.lastName}
+                            </span>
+                            <span className="ml-2 text-xs text-text-muted">
+                              {p.email}
+                            </span>
+                            <span className="ml-2 text-xs text-text-muted">
+                              HCP: {p.handicapIndex?.toFixed(1) ?? "N/A"}
+                            </span>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              const res = await fetch(
+                                `/api/tournaments/${id}/register`,
+                                {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({ playerId: p.id }),
+                                },
+                              );
+                              if (res.ok) {
+                                const data = await res.json();
+                                setRegMsg(
+                                  `Registered ${data.playerName} (HCP: ${data.playingHandicap ?? "N/A"})`,
+                                );
+                                load();
+                              } else {
+                                const err = await res.json();
+                                setRegMsg(`Error: ${err.error}`);
+                              }
+                            }}
+                            className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white hover:bg-primary-dark"
+                          >
+                            Register
+                          </button>
+                        </div>
+                      ))}
+                    {players.filter((p) => {
+                      const q = playerSearch.toLowerCase();
+                      return (
+                        `${p.firstName} ${p.lastName}`
+                          .toLowerCase()
+                          .includes(q) ||
+                        p.email.toLowerCase().includes(q)
+                      );
+                    }).length === 0 && (
+                      <p className="px-4 py-3 text-sm text-text-muted">
+                        No matching players found.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-4 border-t border-border pt-4">
+                  <button
+                    onClick={() => setShowNewPlayer(!showNewPlayer)}
+                    className="text-sm text-text-muted hover:text-secondary"
+                  >
+                    {showNewPlayer
+                      ? "Cancel new player"
+                      : "Player not in database? Create new"}
+                  </button>
+
+                  {showNewPlayer && (
+                    <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      <input
+                        placeholder="First Name *"
+                        value={newPlayer.firstName}
+                        onChange={(e) =>
+                          setNewPlayer({
+                            ...newPlayer,
+                            firstName: e.target.value,
+                          })
+                        }
+                        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                      />
+                      <input
+                        placeholder="Last Name *"
+                        value={newPlayer.lastName}
+                        onChange={(e) =>
+                          setNewPlayer({
+                            ...newPlayer,
+                            lastName: e.target.value,
+                          })
+                        }
+                        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                      />
+                      <input
+                        placeholder="Email *"
+                        value={newPlayer.email}
+                        onChange={(e) =>
+                          setNewPlayer({
+                            ...newPlayer,
+                            email: e.target.value,
+                          })
+                        }
+                        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                      />
+                      <select
+                        value={newPlayer.gender}
+                        onChange={(e) =>
+                          setNewPlayer({
+                            ...newPlayer,
+                            gender: e.target.value,
+                          })
+                        }
+                        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                      >
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                      </select>
+                      <input
+                        placeholder="Handicap Index"
+                        value={newPlayer.handicapIndex}
+                        onChange={(e) =>
+                          setNewPlayer({
+                            ...newPlayer,
+                            handicapIndex: e.target.value,
+                          })
+                        }
+                        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                      />
+                      <input
+                        placeholder="Phone"
+                        value={newPlayer.phone}
+                        onChange={(e) =>
+                          setNewPlayer({
+                            ...newPlayer,
+                            phone: e.target.value,
+                          })
+                        }
+                        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                      />
+                      <button
+                        onClick={async () => {
+                          if (
+                            !newPlayer.firstName ||
+                            !newPlayer.lastName ||
+                            !newPlayer.email
+                          ) {
+                            setRegMsg(
+                              "First name, last name and email are required",
+                            );
+                            return;
+                          }
+                          // Create player then register
+                          const pRes = await fetch("/api/players", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                              firstName: newPlayer.firstName,
+                              lastName: newPlayer.lastName,
+                              email: newPlayer.email,
+                              gender: newPlayer.gender,
+                              handicapIndex: newPlayer.handicapIndex
+                                ? parseFloat(newPlayer.handicapIndex)
+                                : null,
+                              phone: newPlayer.phone || null,
+                            }),
+                          });
+                          if (!pRes.ok) {
+                            const err = await pRes.json();
+                            setRegMsg(`Error creating player: ${err.error}`);
+                            return;
+                          }
+                          const player = await pRes.json();
+                          // Now register
+                          const rRes = await fetch(
+                            `/api/tournaments/${id}/register`,
+                            {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                              },
+                              body: JSON.stringify({ playerId: player.id }),
+                            },
+                          );
+                          if (rRes.ok) {
+                            const data = await rRes.json();
+                            setRegMsg(
+                              `Created & registered ${data.playerName}`,
+                            );
+                            setNewPlayer({
+                              firstName: "",
+                              lastName: "",
+                              email: "",
+                              gender: "M",
+                              handicapIndex: "",
+                              phone: "",
+                            });
+                            setShowNewPlayer(false);
+                            load();
+                          } else {
+                            const err = await rRes.json();
+                            setRegMsg(`Error registering: ${err.error}`);
+                          }
+                        }}
+                        className="col-span-2 rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary/90 sm:col-span-1"
+                      >
+                        Create & Register
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 

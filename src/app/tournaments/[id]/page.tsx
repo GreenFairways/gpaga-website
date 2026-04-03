@@ -49,16 +49,6 @@ export default function TournamentDetailPage({
   const [activeTab, setActiveTab] = useState<
     "info" | "participants" | "teetimes" | "leaderboard"
   >("info");
-  const [regForm, setRegForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    gender: "M" as "M" | "F",
-    handicapIndex: "",
-    phone: "",
-  });
-  const [regStatus, setRegStatus] = useState<string | null>(null);
-
   const load = useCallback(async () => {
     const [tRes, rRes] = await Promise.all([
       fetch(`/api/tournaments/${id}`),
@@ -84,7 +74,6 @@ export default function TournamentDetailPage({
     );
   }
 
-  const canRegister = tournament.status === "registration_open";
   const hasScores =
     tournament.status === "in_progress" || tournament.status === "completed";
   const hasPairings = registrations.some((r) => r.flightNumber != null);
@@ -102,45 +91,6 @@ export default function TournamentDetailPage({
       const arr = byGroup.get(r.groupNumber) || [];
       arr.push(r);
       byGroup.set(r.groupNumber, arr);
-    }
-  }
-
-  async function handleRegister(e: React.FormEvent) {
-    e.preventDefault();
-    setRegStatus(null);
-
-    const res = await fetch(`/api/tournaments/${id}/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        firstName: regForm.firstName,
-        lastName: regForm.lastName,
-        email: regForm.email,
-        gender: regForm.gender,
-        handicapIndex: regForm.handicapIndex
-          ? parseFloat(regForm.handicapIndex)
-          : null,
-        phone: regForm.phone || null,
-      }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      setRegStatus(
-        `Registered! Your access code: ${data.accessCode}. Save it for score entry.`,
-      );
-      load();
-      setRegForm({
-        firstName: "",
-        lastName: "",
-        email: "",
-        gender: "M",
-        handicapIndex: "",
-        phone: "",
-      });
-    } else {
-      const err = await res.json();
-      setRegStatus(`Error: ${err.error}`);
     }
   }
 
@@ -231,101 +181,22 @@ export default function TournamentDetailPage({
                   />
                 </div>
 
-                {/* Registration form */}
-                {canRegister && (
+                {/* Registration status */}
+                {tournament.status === "registration_open" && (
                   <div className="rounded-2xl border border-primary/20 bg-surface-elevated p-6">
-                    <h3 className="font-semibold text-secondary">Register</h3>
-                    <form
-                      onSubmit={handleRegister}
-                      className="mt-4 grid gap-4 sm:grid-cols-2"
-                    >
-                      <input
-                        type="text"
-                        placeholder="First Name *"
-                        required
-                        value={regForm.firstName}
-                        onChange={(e) =>
-                          setRegForm({ ...regForm, firstName: e.target.value })
-                        }
-                        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Last Name *"
-                        required
-                        value={regForm.lastName}
-                        onChange={(e) =>
-                          setRegForm({ ...regForm, lastName: e.target.value })
-                        }
-                        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-                      />
-                      <input
-                        type="email"
-                        placeholder="Email *"
-                        required
-                        value={regForm.email}
-                        onChange={(e) =>
-                          setRegForm({ ...regForm, email: e.target.value })
-                        }
-                        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-                      />
-                      <input
-                        type="tel"
-                        placeholder="Phone"
-                        value={regForm.phone}
-                        onChange={(e) =>
-                          setRegForm({ ...regForm, phone: e.target.value })
-                        }
-                        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-                      />
-                      <div className="flex gap-4">
-                        <select
-                          value={regForm.gender}
-                          onChange={(e) =>
-                            setRegForm({
-                              ...regForm,
-                              gender: e.target.value as "M" | "F",
-                            })
-                          }
-                          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-                        >
-                          <option value="M">Men</option>
-                          <option value="F">Women</option>
-                        </select>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="54"
-                          placeholder="Handicap Index"
-                          value={regForm.handicapIndex}
-                          onChange={(e) =>
-                            setRegForm({
-                              ...regForm,
-                              handicapIndex: e.target.value,
-                            })
-                          }
-                          className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-                        />
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                        <svg className="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                       </div>
-                      <button
-                        type="submit"
-                        className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark sm:col-span-2"
-                      >
-                        Register
-                      </button>
-                    </form>
-                    {regStatus && (
-                      <p
-                        className={`mt-4 text-sm ${
-                          regStatus.startsWith("Error")
-                            ? "text-red-600"
-                            : "text-emerald-600"
-                        }`}
-                      >
-                        {regStatus}
-                      </p>
-                    )}
+                      <div>
+                        <h3 className="font-semibold text-secondary">Registration Open</h3>
+                        <p className="text-sm text-text-muted">
+                          Contact the tournament director or register via the GPAGA member app.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

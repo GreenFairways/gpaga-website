@@ -1,18 +1,35 @@
 import type { NextRequest } from "next/server";
 import { sql } from "@/lib/db";
+import { isAdmin } from "@/lib/auth/session";
 import { mapRegistration } from "@/lib/db/mappers";
 import {
   generateAccessCode,
   calcRegistrationHandicap,
 } from "@/lib/tournament/registration";
 
-/** POST /api/tournaments/[id]/register — register a player for a tournament */
+/**
+ * POST /api/tournaments/[id]/register
+ *
+ * Two modes:
+ * 1. Admin: { playerId } — register an existing player by ID
+ * 2. Member API: { memberToken } — authenticated member registers themselves (future mobile app)
+ *
+ * No public open registration with raw name/email fields.
+ */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: tournamentId } = await params;
   const body = await request.json();
+
+  // Determine auth mode
+  const admin = await isAdmin();
+  const { playerId, memberToken } = body;
+
+  if (!admin && !memberToken) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   // 1. Get tournament
   const { rows: tRows } = await sql`
@@ -23,7 +40,8 @@ export async function POST(
   }
   const tournament = tRows[0];
 
-  if (tournament.status !== "registration_open") {
+  // Admin can register regardless of status; members only when open
+  if (!admin && tournament.status !== "registration_open") {
     return Response.json(
       { error: "Registration is not open for this tournament" },
       { status: 400 },
@@ -39,41 +57,37 @@ export async function POST(
     return Response.json({ error: "Tournament is full" }, { status: 400 });
   }
 
-  // 3. Upsert player
-  const {
-    firstName,
-    lastName,
-    email,
-    phone = null,
-    gender,
-    handicapIndex = null,
-    homeClub = null,
-  } = body;
+  // 3. Resolve player
+  let resolvedPlayerId: string;
 
-  if (!firstName || !lastName || !email || !gender) {
+  if (admin && playerId) {
+    // Admin mode: register existing player by ID
+    resolvedPlayerId = playerId;
+  } else if (memberToken) {
+    // Member mode: verify token and get player ID
+    // For now, memberToken = player ID (will be replaced with JWT when member auth is built)
+    // Future: verify JWT, extract player ID from claims
+    resolvedPlayerId = memberToken;
+  } else {
     return Response.json(
-      { error: "Missing required fields: firstName, lastName, email, gender" },
+      { error: "playerId required (admin) or memberToken required (member)" },
       { status: 400 },
     );
   }
 
+  // 4. Verify player exists
   const { rows: playerRows } = await sql`
-    INSERT INTO players (first_name, last_name, email, phone, gender, handicap_index, home_club)
-    VALUES (${firstName}, ${lastName}, ${email}, ${phone}, ${gender}, ${handicapIndex}, ${homeClub})
-    ON CONFLICT (email) DO UPDATE SET
-      first_name = EXCLUDED.first_name,
-      last_name = EXCLUDED.last_name,
-      phone = COALESCE(EXCLUDED.phone, players.phone),
-      handicap_index = COALESCE(EXCLUDED.handicap_index, players.handicap_index),
-      home_club = COALESCE(EXCLUDED.home_club, players.home_club)
-    RETURNING *
+    SELECT * FROM players WHERE id = ${resolvedPlayerId}
   `;
+  if (playerRows.length === 0) {
+    return Response.json({ error: "Player not found" }, { status: 404 });
+  }
   const player = playerRows[0];
 
-  // 4. Check for duplicate registration
+  // 5. Check for duplicate registration
   const { rows: existingReg } = await sql`
     SELECT id FROM registrations
-    WHERE tournament_id = ${tournamentId} AND player_id = ${player.id}
+    WHERE tournament_id = ${tournamentId} AND player_id = ${resolvedPlayerId}
   `;
   if (existingReg.length > 0) {
     return Response.json(
@@ -82,21 +96,21 @@ export async function POST(
     );
   }
 
-  // 5. Calculate handicap
-  const hi = handicapIndex != null ? handicapIndex : parseFloat(player.handicap_index);
+  // 6. Calculate handicap
+  const hi = player.handicap_index != null ? parseFloat(player.handicap_index) : null;
   const { courseHandicap, playingHandicap } = calcRegistrationHandicap(
-    isNaN(hi) ? null : hi,
+    hi,
     tournament.course_id,
     tournament.tee_name,
-    gender,
+    player.gender,
     parseFloat(tournament.handicap_allowance),
   );
 
-  // 6. Create registration
+  // 7. Create registration
   const accessCode = generateAccessCode();
   const { rows: regRows } = await sql`
     INSERT INTO registrations (tournament_id, player_id, handicap_index_at_reg, course_handicap, playing_handicap, access_code)
-    VALUES (${tournamentId}, ${player.id}, ${isNaN(hi) ? null : hi}, ${courseHandicap}, ${playingHandicap}, ${accessCode})
+    VALUES (${tournamentId}, ${resolvedPlayerId}, ${hi}, ${courseHandicap}, ${playingHandicap}, ${accessCode})
     RETURNING *
   `;
 
