@@ -1,6 +1,7 @@
 "use client";
 
 import FadeIn from "./FadeIn";
+import Link from "next/link";
 
 const featured = {
   name: "Tbilisi Hills Golf Club",
@@ -15,24 +16,26 @@ const featured = {
 
 const secondary = [
   {
+    slug: "tabori-paragraph",
     name: "Tabori Paragraph",
     holes: 9,
     par: 36,
     location: "Tbilisi Region",
     description:
-      "A challenging 9-hole layout mapped by Clere Golf, playing 5,946m from the black tees over 18 holes. A serious test for any golfer.",
-    highlight: "Clere Golf Mapping",
-    length: "5,946m (18)",
+      "A dramatic 9-hole course on Mount Tabori designed by Kevin Ramsey, accessible by cable car from central Tbilisi. Part of the Marriott Autograph Collection resort.",
+    highlight: "Marriott Autograph Collection",
+    length: "2,973m",
   },
   {
+    slug: "ambassadori-kachreti",
     name: "Ambassadori Kachreti",
     holes: 9,
     par: 36,
     location: "Kakheti",
     description:
-      "Nestled in Georgia's famous wine region, this 9-hole course offers a unique combination of golf and Georgian hospitality.",
+      "Nestled in Georgia's famous wine region, this 9-hole course offers a unique combination of golf and Georgian hospitality at a 5-star resort.",
     highlight: "Wine Country Golf",
-    length: "TBC",
+    length: "2,796m",
   },
 ];
 
@@ -62,6 +65,7 @@ export default function Courses() {
         <div className="mt-16 grid gap-6 lg:grid-cols-5">
           {/* Featured course — spans 3 of 5 columns */}
           <FadeIn direction="up" delay={0} className="lg:col-span-3">
+            <Link href="/courses/tbilisi-hills">
             <article className="group flex h-full flex-col rounded-2xl border border-border bg-surface-elevated transition-transform hover:-translate-y-1">
               {/* Top band with course stats */}
               <div className="flex items-center justify-between border-b border-border px-8 py-5">
@@ -128,6 +132,7 @@ export default function Courses() {
                 </span>
               </div>
             </article>
+            </Link>
           </FadeIn>
 
           {/* Secondary courses — stacked in 2 of 5 columns */}
@@ -138,6 +143,7 @@ export default function Courses() {
                 direction="right"
                 delay={0.12 + i * 0.12}
               >
+                <Link href={`/courses/${course.slug}`}>
                 <article className="group flex h-full flex-col rounded-2xl border border-border bg-surface-elevated p-6 transition-colors hover:border-primary/30">
                   <div className="flex items-center gap-3">
                     <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-sm font-bold text-secondary">
@@ -167,6 +173,7 @@ export default function Courses() {
                     </span>
                   </div>
                 </article>
+                </Link>
               </FadeIn>
             ))}
           </div>
