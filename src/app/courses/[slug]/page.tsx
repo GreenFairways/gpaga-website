@@ -170,7 +170,7 @@ export default async function CoursePage({
                   <thead>
                     <tr className="border-b border-border text-left text-xs font-medium uppercase tracking-wider text-text-muted">
                       <th className="py-3 pr-2">Hole</th>
-                      {courseData.holes.slice(0, courseData.physicalHoles).map((h) => (
+                      {courseData.holes.slice(0, 9).map((h) => (
                         <th key={h.number} className="min-w-[2.5rem] py-3 text-center">
                           {h.number}
                         </th>
