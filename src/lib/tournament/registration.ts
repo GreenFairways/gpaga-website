@@ -1,0 +1,50 @@
+/**
+ * Registration logic — handicap calculation at registration time.
+ */
+
+import { getCourse } from "@/data/courses";
+import { calcFullCourseHandicap } from "@/lib/handicap";
+import type { TeeData, HoleData } from "@/lib/handicap/types";
+
+/** Generate a 6-character alphanumeric access code */
+export function generateAccessCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1 for readability
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+/** Calculate course and playing handicap for a registration */
+export function calcRegistrationHandicap(
+  handicapIndex: number | null,
+  courseId: string,
+  teeName: string,
+  gender: "M" | "F",
+  handicapAllowance: number,
+): { courseHandicap: number | null; playingHandicap: number | null } {
+  if (handicapIndex == null) return { courseHandicap: null, playingHandicap: null };
+
+  const course = getCourse(courseId);
+  if (!course) return { courseHandicap: null, playingHandicap: null };
+
+  // Find the tee matching name and gender
+  const tee = course.tees.find(
+    (t: TeeData) =>
+      t.name === teeName && (t.gender === gender || t.gender === "Mixed"),
+  );
+  if (!tee) return { courseHandicap: null, playingHandicap: null };
+
+  const result = calcFullCourseHandicap(
+    handicapIndex,
+    tee,
+    course.holes as HoleData[],
+    handicapAllowance,
+  );
+
+  return {
+    courseHandicap: result.courseHandicap,
+    playingHandicap: result.playingHandicap,
+  };
+}
