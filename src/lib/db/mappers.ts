@@ -9,7 +9,10 @@ import type {
   RegistrationWithPlayer,
   TournamentScore,
   FlightConfig,
+  FormatConfig,
   Division,
+  Team,
+  Match,
 } from "../tournament/types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -30,6 +33,7 @@ export function mapTournament(row: any): Tournament {
     handicapAllowance: parseFloat(row.handicap_allowance) || 0.95,
     flightConfig: row.flight_config as FlightConfig | null,
     divisions: row.divisions as Division[] | null,
+    formatConfig: (row.format_config as FormatConfig) || {},
     createdAt: row.created_at?.toISOString?.() || row.created_at,
     updatedAt: row.updated_at?.toISOString?.() || row.updated_at,
   };
@@ -61,6 +65,7 @@ export function mapRegistration(row: any): Registration {
     courseHandicap: row.course_handicap != null ? parseInt(row.course_handicap) : null,
     playingHandicap: row.playing_handicap != null ? parseInt(row.playing_handicap) : null,
     divisionLabel: row.division_label || null,
+    teamId: row.team_id || null,
     flightNumber: row.flight_number,
     groupNumber: row.group_number,
     teeTime: row.tee_time || null,
@@ -89,5 +94,37 @@ export function mapScore(row: any): TournamentScore {
     stablefordPoints: row.stableford_points,
     enteredBy: row.entered_by,
     enteredAt: row.entered_at?.toISOString?.() || row.entered_at,
+  };
+}
+
+export function mapTeam(row: any): Team {
+  return {
+    id: row.id,
+    tournamentId: row.tournament_id,
+    name: row.name,
+    teamHandicap: row.team_handicap != null ? parseFloat(row.team_handicap) : null,
+    seed: row.seed,
+    createdAt: row.created_at?.toISOString?.() || row.created_at,
+  };
+}
+
+export function mapMatch(row: any): Match {
+  return {
+    id: row.id,
+    tournamentId: row.tournament_id,
+    roundNumber: row.round_number,
+    matchNumber: row.match_number,
+    stage: row.stage || "main",
+    sideAPlayerId: row.side_a_player_id || null,
+    sideATeamId: row.side_a_team_id || null,
+    sideBPlayerId: row.side_b_player_id || null,
+    sideBTeamId: row.side_b_team_id || null,
+    status: row.status,
+    winnerPlayerId: row.winner_player_id || null,
+    winnerTeamId: row.winner_team_id || null,
+    resultText: row.result_text || null,
+    nextMatchId: row.next_match_id || null,
+    loserMatchId: row.loser_match_id || null,
+    createdAt: row.created_at?.toISOString?.() || row.created_at,
   };
 }

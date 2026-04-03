@@ -41,7 +41,7 @@ export async function initDatabase(): Promise<void> {
       course_id VARCHAR(50) NOT NULL,
       tee_name VARCHAR(50) NOT NULL,
       gender VARCHAR(5) DEFAULT 'Mixed',
-      format VARCHAR(20) NOT NULL CHECK (format IN ('strokeplay', 'stableford', 'matchplay')),
+      format VARCHAR(30) NOT NULL DEFAULT 'strokeplay',
       status VARCHAR(25) DEFAULT 'draft',
       max_players INT DEFAULT 80,
       entry_fee_lari INT DEFAULT 0,
@@ -49,6 +49,7 @@ export async function initDatabase(): Promise<void> {
       handicap_allowance DECIMAL(3,2) DEFAULT 0.95,
       flight_config JSONB,
       divisions JSONB,
+      format_config JSONB DEFAULT '{}',
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
@@ -87,7 +88,44 @@ export async function initDatabase(): Promise<void> {
     )
   `;
 
-  // Migrations for existing tables
+  // ──── Teams ────
+  await sql`
+    CREATE TABLE IF NOT EXISTS teams (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+      name VARCHAR(100) NOT NULL,
+      team_handicap DECIMAL(4,1),
+      seed INT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+
+  // ──── Matches (for match play / brackets) ────
+  await sql`
+    CREATE TABLE IF NOT EXISTS matches (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+      round_number INT NOT NULL,
+      match_number INT NOT NULL,
+      stage VARCHAR(30) DEFAULT 'main',
+      side_a_player_id UUID REFERENCES players(id),
+      side_a_team_id UUID REFERENCES teams(id),
+      side_b_player_id UUID REFERENCES players(id),
+      side_b_team_id UUID REFERENCES teams(id),
+      status VARCHAR(20) DEFAULT 'scheduled',
+      winner_player_id UUID,
+      winner_team_id UUID,
+      result_text VARCHAR(50),
+      hole_scores JSONB,
+      next_match_id UUID REFERENCES matches(id),
+      loser_match_id UUID REFERENCES matches(id),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+
+  // ──── Migrations for existing tables ────
+
+  // Tournaments
   await sql`
     DO $$ BEGIN
       ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS divisions JSONB;
@@ -96,16 +134,67 @@ export async function initDatabase(): Promise<void> {
   `;
   await sql`
     DO $$ BEGIN
-      ALTER TABLE registrations ADD COLUMN IF NOT EXISTS division_label VARCHAR(10);
+      ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS format_config JSONB DEFAULT '{}';
     EXCEPTION WHEN duplicate_column THEN NULL;
     END $$
   `;
 
-  // Indexes
+  // Expand format CHECK constraint (drop old, add new)
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE tournaments DROP CONSTRAINT IF EXISTS tournaments_format_check;
+    EXCEPTION WHEN undefined_object THEN NULL;
+    END $$
+  `;
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE tournaments ADD CONSTRAINT tournaments_format_check
+        CHECK (format IN (
+          'strokeplay', 'stableford', 'matchplay', 'modified_stableford',
+          'par_bogey', 'match_play', 'scramble', 'best_ball',
+          'greensome', 'foursomes', 'shamble', 'skins'
+        ));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$
+  `;
+
+  // Registrations
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE registrations ADD COLUMN IF NOT EXISTS division_label VARCHAR(10);
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `;
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE registrations ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id);
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `;
+
+  // Scores
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE scores ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id);
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `;
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE scores ADD COLUMN IF NOT EXISTS round_number INT DEFAULT 1;
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `;
+
+  // ──── Indexes ────
   await sql`CREATE INDEX IF NOT EXISTS idx_reg_tournament ON registrations(tournament_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_reg_player ON registrations(player_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_reg_team ON registrations(team_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_scores_registration ON scores(registration_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_scores_team ON scores(team_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_tournaments_status ON tournaments(status)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_tournaments_date ON tournaments(date)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_teams_tournament ON teams(tournament_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches(tournament_id)`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_players_amgolf_id ON players(amgolf_people_id) WHERE amgolf_people_id IS NOT NULL`;
 }

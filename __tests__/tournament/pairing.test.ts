@@ -20,6 +20,8 @@ function makeReg(
     handicapIndexAtReg: playingHandicap,
     courseHandicap: playingHandicap,
     playingHandicap,
+    divisionLabel: null,
+    teamId: null,
     flightNumber: null,
     groupNumber: null,
     teeTime: null,

@@ -48,7 +48,16 @@ const FORMAT_LABELS: Record<string, string> = {
   strokeplay: "Strokeplay",
   stableford: "Stableford",
   matchplay: "Match Play",
+  match_play: "Match Play",
+  scramble: "Scramble",
+  best_ball: "Best Ball",
+  greensome: "Greensome",
+  foursomes: "Foursomes",
+  shamble: "Shamble",
+  skins: "Skins",
 };
+
+const TEAM_FORMATS = ["scramble", "best_ball", "greensome", "foursomes", "shamble"];
 
 export default function TournamentDetailPage({
   params,
@@ -448,6 +457,9 @@ interface LeaderboardEntryType {
   toPar: number;
   stablefordTotal: number | null;
   thru: number;
+  teamId?: string;
+  teamName?: string;
+  teamMembers?: string[];
 }
 
 interface DivisionLeaderboard {
@@ -542,11 +554,14 @@ function LeaderboardView({
     return <p className="text-text-muted">No scores entered yet.</p>;
   }
 
+  const isTeam = TEAM_FORMATS.includes(format);
+
   return (
     <LeaderboardTable
       entries={entries}
       isStableford={format === "stableford"}
       holes={18}
+      isTeamFormat={isTeam}
     />
   );
 }
@@ -555,10 +570,12 @@ function LeaderboardTable({
   entries,
   isStableford,
   holes,
+  isTeamFormat = false,
 }: {
   entries: LeaderboardEntryType[];
   isStableford: boolean;
   holes: number;
+  isTeamFormat?: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-border">
@@ -566,9 +583,11 @@ function LeaderboardTable({
         <thead>
           <tr className="border-b border-border bg-accent text-left">
             <th className="px-4 py-3 font-medium text-text-muted">Pos</th>
-            <th className="px-4 py-3 font-medium text-text-muted">Player</th>
             <th className="px-4 py-3 font-medium text-text-muted">
-              Playing HCP
+              {isTeamFormat ? "Team" : "Player"}
+            </th>
+            <th className="px-4 py-3 font-medium text-text-muted">
+              {isTeamFormat ? "Team HCP" : "Playing HCP"}
             </th>
             {isStableford ? (
               <th className="px-4 py-3 font-medium text-text-muted">Points</th>
@@ -591,8 +610,15 @@ function LeaderboardTable({
               <td className="px-4 py-3 font-medium text-secondary">
                 {e.tied ? `T${e.position}` : e.position}
               </td>
-              <td className="px-4 py-3 font-medium text-secondary">
-                {e.playerName}
+              <td className="px-4 py-3">
+                <div className="font-medium text-secondary">
+                  {isTeamFormat ? (e.teamName ?? e.playerName) : e.playerName}
+                </div>
+                {isTeamFormat && e.teamMembers && e.teamMembers.length > 0 && (
+                  <div className="mt-0.5 text-xs text-text-muted">
+                    {e.teamMembers.join(", ")}
+                  </div>
+                )}
               </td>
               <td className="px-4 py-3">{e.playingHandicap}</td>
               {isStableford ? (

@@ -1,7 +1,7 @@
 import { sql } from "@/lib/db";
 import { isAdmin } from "@/lib/auth/session";
 import { mapTournament } from "@/lib/db/mappers";
-import type { TournamentFormat, FlightConfig, Division } from "@/lib/tournament/types";
+import type { TournamentFormat, FlightConfig, FormatConfig, Division } from "@/lib/tournament/types";
 
 /** GET /api/tournaments — list all tournaments, newest first */
 export async function GET() {
@@ -31,6 +31,7 @@ export async function POST(request: Request) {
     handicapAllowance = 0.95,
     flightConfig = null,
     divisions = null,
+    formatConfig = {},
   } = body as {
     name: string;
     date: string;
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
     handicapAllowance?: number;
     flightConfig?: FlightConfig | null;
     divisions?: Division[] | null;
+    formatConfig?: FormatConfig;
   };
 
   if (!name || !date || !courseId || !teeName || !format) {
@@ -54,8 +56,8 @@ export async function POST(request: Request) {
   }
 
   const { rows } = await sql`
-    INSERT INTO tournaments (name, date, course_id, tee_name, gender, format, max_players, entry_fee_lari, rules, handicap_allowance, flight_config, divisions)
-    VALUES (${name}, ${date}, ${courseId}, ${teeName}, ${gender}, ${format}, ${maxPlayers}, ${entryFeeLari}, ${rules}, ${handicapAllowance}, ${JSON.stringify(flightConfig)}, ${JSON.stringify(divisions)})
+    INSERT INTO tournaments (name, date, course_id, tee_name, gender, format, max_players, entry_fee_lari, rules, handicap_allowance, flight_config, divisions, format_config)
+    VALUES (${name}, ${date}, ${courseId}, ${teeName}, ${gender}, ${format}, ${maxPlayers}, ${entryFeeLari}, ${rules}, ${handicapAllowance}, ${JSON.stringify(flightConfig)}, ${JSON.stringify(divisions)}, ${JSON.stringify(formatConfig)})
     RETURNING *
   `;
 
