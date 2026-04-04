@@ -25,6 +25,7 @@ export async function POST(
   }
 
   const { id: tournamentId } = await params;
+  try {
   const body = await request.json().catch(() => ({}));
   const filterPlayerIds: string[] | undefined = body.playerIds;
 
@@ -163,4 +164,9 @@ export async function POST(
     changed: changed.length,
     details: results,
   });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : undefined;
+    return Response.json({ error: message, stack }, { status: 500 });
+  }
 }
