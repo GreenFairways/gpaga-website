@@ -62,34 +62,37 @@ export async function PATCH(
     return Response.json({ error: "Player not found" }, { status: 404 });
   }
 
-  const {
-    firstName,
-    lastName,
-    email,
-    phone,
-    gender,
-    handicapIndex,
-    handicapSource,
-    homeClub,
-    amgolfPeopleId,
-    dateOfBirth,
-  } = body;
+  // Build SET clauses only for provided fields
+  const fieldMap: Record<string, { column: string; value: unknown }> = {
+    firstName: { column: "first_name", value: body.firstName },
+    lastName: { column: "last_name", value: body.lastName },
+    email: { column: "email", value: body.email },
+    phone: { column: "phone", value: body.phone },
+    gender: { column: "gender", value: body.gender },
+    handicapIndex: { column: "handicap_index", value: body.handicapIndex },
+    handicapSource: { column: "handicap_source", value: body.handicapSource },
+    homeClub: { column: "home_club", value: body.homeClub },
+    amgolfPeopleId: { column: "amgolf_people_id", value: body.amgolfPeopleId },
+    dateOfBirth: { column: "date_of_birth", value: body.dateOfBirth },
+  };
 
-  const { rows } = await sql`
-    UPDATE players SET
-      first_name = COALESCE(${firstName ?? null}, first_name),
-      last_name = COALESCE(${lastName ?? null}, last_name),
-      email = COALESCE(${email ?? null}, email),
-      phone = COALESCE(${phone ?? null}, phone),
-      gender = COALESCE(${gender ?? null}, gender),
-      handicap_index = COALESCE(${handicapIndex ?? null}, handicap_index),
-      handicap_source = COALESCE(${handicapSource ?? null}, handicap_source),
-      home_club = COALESCE(${homeClub ?? null}, home_club),
-      amgolf_people_id = COALESCE(${amgolfPeopleId ?? null}, amgolf_people_id),
-      date_of_birth = COALESCE(${dateOfBirth ?? null}, date_of_birth)
-    WHERE id = ${id}
-    RETURNING *
-  `;
+  const updates: { column: string; value: unknown }[] = [];
+  for (const [key, entry] of Object.entries(fieldMap)) {
+    if (key in body) updates.push(entry);
+  }
 
+  if (updates.length === 0) {
+    return Response.json(mapPlayer(existing[0]));
+  }
+
+  // Apply updates one field at a time (Vercel Postgres tagged template limitation)
+  for (const u of updates) {
+    await sql.query(
+      `UPDATE players SET ${u.column} = $1 WHERE id = $2`,
+      [u.value, id],
+    );
+  }
+
+  const { rows } = await sql`SELECT * FROM players WHERE id = ${id}`;
   return Response.json(mapPlayer(rows[0]));
 }
