@@ -26,6 +26,7 @@ export async function POST(request: Request) {
     handicapIndex = null,
     handicapSource = "manual",
     homeClub = null,
+    dateOfBirth = null,
   } = body;
 
   if (!firstName || !lastName || !email || !gender) {
@@ -37,8 +38,8 @@ export async function POST(request: Request) {
 
   // Upsert by email
   const { rows } = await sql`
-    INSERT INTO players (first_name, last_name, email, phone, gender, handicap_index, handicap_source, home_club)
-    VALUES (${firstName}, ${lastName}, ${email}, ${phone}, ${gender}, ${handicapIndex}, ${handicapSource}, ${homeClub})
+    INSERT INTO players (first_name, last_name, email, phone, gender, handicap_index, handicap_source, home_club, date_of_birth)
+    VALUES (${firstName}, ${lastName}, ${email}, ${phone}, ${gender}, ${handicapIndex}, ${handicapSource}, ${homeClub}, ${dateOfBirth})
     ON CONFLICT (email) DO UPDATE SET
       first_name = EXCLUDED.first_name,
       last_name = EXCLUDED.last_name,
@@ -46,7 +47,8 @@ export async function POST(request: Request) {
       gender = EXCLUDED.gender,
       handicap_index = COALESCE(EXCLUDED.handicap_index, players.handicap_index),
       handicap_source = EXCLUDED.handicap_source,
-      home_club = COALESCE(EXCLUDED.home_club, players.home_club)
+      home_club = COALESCE(EXCLUDED.home_club, players.home_club),
+      date_of_birth = COALESCE(EXCLUDED.date_of_birth, players.date_of_birth)
     RETURNING *
   `;
 

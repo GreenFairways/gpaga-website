@@ -21,6 +21,7 @@ export const TBILISI_HILLS_PRESET: Division[] = [
     hcpRange: [0, 18],
     tees: [
       { gender: "M", teeName: "Silver" },
+      { gender: "M", teeName: "White", seniorAge: 60 },
       { gender: "F", teeName: "Green" },
     ],
     tieBreak: "lower-handicap",
@@ -33,6 +34,7 @@ export const TBILISI_HILLS_PRESET: Division[] = [
     hcpRange: [18.1, 36],
     tees: [
       { gender: "M", teeName: "Silver" },
+      { gender: "M", teeName: "White", seniorAge: 60 },
       { gender: "F", teeName: "Green" },
     ],
     tieBreak: "lower-handicap",
@@ -76,19 +78,69 @@ export function assignDivision(
 }
 
 /**
- * Get tee name for a player in a division based on gender.
+ * Calculate age in years from date of birth on a given date.
+ */
+function calcAge(dateOfBirth: string, onDate: string): number {
+  const dob = new Date(dateOfBirth);
+  const ref = new Date(onDate);
+  let age = ref.getFullYear() - dob.getFullYear();
+  const monthDiff = ref.getMonth() - dob.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && ref.getDate() < dob.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+/**
+ * Get tee name for a player in a division based on gender and age.
+ *
+ * Matching priority:
+ * 1. Senior rule: gender matches AND player age >= seniorAge
+ * 2. Gender-specific rule (no seniorAge)
+ * 3. Fallback: "any" gender, then first rule
  */
 export function getTeeForPlayer(
   division: Division,
   gender: "M" | "F",
+  dateOfBirth?: string | null,
+  tournamentDate?: string,
 ): string {
-  // Find gender-specific rule first, then fallback to "any"
-  const rule =
-    division.tees.find((t) => t.gender === gender) ||
-    division.tees.find((t) => t.gender === "any") ||
-    division.tees[0];
+  const age =
+    dateOfBirth && tournamentDate
+      ? calcAge(dateOfBirth, tournamentDate)
+      : null;
 
-  return rule?.teeName ?? "White";
+  // 1. Check age-based rules (senior or junior)
+  if (age != null) {
+    // Junior rule: player age <= juniorMaxAge
+    const juniorRule = division.tees.find(
+      (t) =>
+        t.juniorMaxAge != null &&
+        age <= t.juniorMaxAge &&
+        (t.gender === gender || t.gender === "any"),
+    );
+    if (juniorRule) return juniorRule.teeName;
+
+    // Senior rule: player age >= seniorAge
+    const seniorRule = division.tees.find(
+      (t) =>
+        t.seniorAge != null &&
+        t.seniorAge > 0 &&
+        age >= t.seniorAge &&
+        (t.gender === gender || t.gender === "any"),
+    );
+    if (seniorRule) return seniorRule.teeName;
+  }
+
+  // 2. Gender-specific rule (no seniorAge)
+  const genderRule = division.tees.find(
+    (t) => t.gender === gender && !t.seniorAge,
+  );
+  if (genderRule) return genderRule.teeName;
+
+  // 3. Fallback
+  const anyRule = division.tees.find((t) => t.gender === "any" && !t.seniorAge);
+  return anyRule?.teeName ?? division.tees[0]?.teeName ?? "White";
 }
 
 /** Available presets for admin UI */

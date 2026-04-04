@@ -199,8 +199,10 @@ export interface Division {
 
 export interface DivisionTeeRule {
   gender: "M" | "F" | "any";
-  /** Optional: age threshold for senior tee */
+  /** Optional: minimum age for this tee (e.g. 60 for seniors) */
   seniorAge?: number;
+  /** Optional: maximum age for this tee (e.g. 18 for juniors) */
+  juniorMaxAge?: number;
   teeName: string;
 }
 
@@ -217,6 +219,7 @@ export interface Player {
   handicapSource: "gpaga" | "manual" | "amgolf" | "foreign";
   homeClub: string | null;
   amgolfPeopleId: string | null;
+  dateOfBirth: string | null;
   createdAt: string;
 }
 

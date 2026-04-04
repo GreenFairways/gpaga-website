@@ -129,7 +129,12 @@ export async function POST(
     const div = assignDivision(divisions, hi);
     if (div) {
       divisionLabel = div.label;
-      teeName = getTeeForPlayer(div, player.gender);
+      const dob = player.date_of_birth instanceof Date
+        ? player.date_of_birth.toISOString().split("T")[0]
+        : player.date_of_birth || null;
+      teeName = getTeeForPlayer(div, player.gender, dob, tournament.date instanceof Date
+        ? tournament.date.toISOString().split("T")[0]
+        : tournament.date);
     }
   }
 

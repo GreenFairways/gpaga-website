@@ -72,6 +72,7 @@ export async function PATCH(
     handicapSource,
     homeClub,
     amgolfPeopleId,
+    dateOfBirth,
   } = body;
 
   const { rows } = await sql`
@@ -84,7 +85,8 @@ export async function PATCH(
       handicap_index = COALESCE(${handicapIndex ?? null}, handicap_index),
       handicap_source = COALESCE(${handicapSource ?? null}, handicap_source),
       home_club = COALESCE(${homeClub ?? null}, home_club),
-      amgolf_people_id = COALESCE(${amgolfPeopleId ?? null}, amgolf_people_id)
+      amgolf_people_id = COALESCE(${amgolfPeopleId ?? null}, amgolf_people_id),
+      date_of_birth = COALESCE(${dateOfBirth ?? null}, date_of_birth)
     WHERE id = ${id}
     RETURNING *
   `;

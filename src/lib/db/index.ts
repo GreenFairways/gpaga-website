@@ -21,14 +21,22 @@ export async function initDatabase(): Promise<void> {
       handicap_source VARCHAR(10) DEFAULT 'manual',
       home_club VARCHAR(200),
       amgolf_people_id VARCHAR(30),
+      date_of_birth DATE,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
 
-  // Add amgolf_people_id to existing tables (idempotent)
+  // Add columns to existing tables (idempotent)
   await sql`
     DO $$ BEGIN
       ALTER TABLE players ADD COLUMN IF NOT EXISTS amgolf_people_id VARCHAR(30);
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `;
+
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE players ADD COLUMN IF NOT EXISTS date_of_birth DATE;
     EXCEPTION WHEN duplicate_column THEN NULL;
     END $$
   `;

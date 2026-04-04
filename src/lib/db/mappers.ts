@@ -51,6 +51,9 @@ export function mapPlayer(row: any): Player {
     handicapSource: row.handicap_source || "manual",
     homeClub: row.home_club || null,
     amgolfPeopleId: row.amgolf_people_id || null,
+    dateOfBirth: row.date_of_birth instanceof Date
+      ? row.date_of_birth.toISOString().split("T")[0]
+      : row.date_of_birth || null,
     createdAt: row.created_at?.toISOString?.() || row.created_at,
   };
 }
