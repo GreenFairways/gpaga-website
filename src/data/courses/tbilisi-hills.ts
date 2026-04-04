@@ -83,7 +83,7 @@ export const tbilisiHills: CourseData = {
       totalDistance: 4575,
       courseRating: 70.3,
       slopeRating: 128,
-      par: 71,
+      par: 72,
       ratingProvisional: false,
       gender: "F",
     },
