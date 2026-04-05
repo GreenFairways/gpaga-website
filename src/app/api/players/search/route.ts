@@ -24,10 +24,10 @@ export async function GET(request: NextRequest) {
 
   const pattern = `%${query}%`;
   const { rows } = await sql`
-    SELECT id, first_name, last_name, email, handicap_index
+    SELECT id, first_name, last_name, email, handicap_index, password_hash IS NOT NULL AS registered
     FROM players
     WHERE (first_name || ' ' || last_name) ILIKE ${pattern}
-       OR email ILIKE ${pattern}
+       OR (password_hash IS NOT NULL AND email ILIKE ${pattern})
     ORDER BY last_name, first_name
     LIMIT 20
   `;
@@ -37,8 +37,9 @@ export async function GET(request: NextRequest) {
       id: r.id,
       firstName: r.first_name,
       lastName: r.last_name,
-      email: r.email,
+      email: r.registered ? r.email : null,
       handicapIndex: r.handicap_index != null ? parseFloat(r.handicap_index) : null,
+      registered: r.registered,
     })),
   );
 }

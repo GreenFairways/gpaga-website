@@ -31,7 +31,7 @@ export async function POST(
   // Determine auth mode
   const admin = await isAdmin();
   const authenticatedPlayerId = await getAuthenticatedPlayerId();
-  const { playerId, memberToken } = body;
+  const { playerId, memberToken, guestFirstName, guestLastName, guestGender } = body;
 
   if (!admin && !authenticatedPlayerId && !memberToken) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
@@ -67,7 +67,16 @@ export async function POST(
   // 3. Resolve player
   let resolvedPlayerId: string;
 
-  if ((admin || organizer) && playerId) {
+  if ((admin || organizer) && guestFirstName && guestLastName) {
+    // Guest mode: create a player record without an account
+    const gender = guestGender || "M";
+    const { rows: guestRows } = await sql`
+      INSERT INTO players (first_name, last_name, gender)
+      VALUES (${guestFirstName.trim()}, ${guestLastName.trim()}, ${gender})
+      RETURNING id
+    `;
+    resolvedPlayerId = guestRows[0].id;
+  } else if ((admin || organizer) && playerId) {
     // Admin/organizer mode: register existing player by ID
     resolvedPlayerId = playerId;
   } else if (authenticatedPlayerId && !playerId) {

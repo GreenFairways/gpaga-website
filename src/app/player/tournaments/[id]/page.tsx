@@ -49,8 +49,9 @@ interface SearchResult {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email: string | null;
   handicapIndex: number | null;
+  registered: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -75,10 +76,14 @@ export default function PlayerTournamentPage({
   const [isOrganizer, setIsOrganizer] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
 
-  // Invite search
+  // Add players
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [inviteMsg, setInviteMsg] = useState("");
+  const [showGuestForm, setShowGuestForm] = useState(false);
+  const [guestFirst, setGuestFirst] = useState("");
+  const [guestLast, setGuestLast] = useState("");
+  const [guestGender, setGuestGender] = useState("M");
 
   // Co-organizer search
   const [orgQuery, setOrgQuery] = useState("");
@@ -159,9 +164,51 @@ export default function PlayerTournamentPage({
       body: JSON.stringify({ playerId: pid }),
     });
     if (res.ok) {
-      setInviteMsg("Invited!");
+      setInviteMsg("Invite sent!");
       setSearchQuery("");
       setSearchResults([]);
+      load();
+    } else {
+      const data = await res.json();
+      setInviteMsg(data.error || "Failed");
+    }
+  }
+
+  async function addExistingPlayer(pid: string) {
+    setInviteMsg("");
+    const res = await fetch(`/api/tournaments/${id}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId: pid }),
+    });
+    if (res.ok) {
+      setInviteMsg("Player added!");
+      setSearchQuery("");
+      setSearchResults([]);
+      load();
+    } else {
+      const data = await res.json();
+      setInviteMsg(data.error || "Failed");
+    }
+  }
+
+  async function addGuest() {
+    if (!guestFirst.trim() || !guestLast.trim()) return;
+    setInviteMsg("");
+    const res = await fetch(`/api/tournaments/${id}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        guestFirstName: guestFirst,
+        guestLastName: guestLast,
+        guestGender: guestGender,
+      }),
+    });
+    if (res.ok) {
+      setInviteMsg("Guest added!");
+      setGuestFirst("");
+      setGuestLast("");
+      setShowGuestForm(false);
       load();
     } else {
       const data = await res.json();
@@ -355,18 +402,18 @@ export default function PlayerTournamentPage({
           )}
         </div>
 
-        {/* Invite Players (organizer) */}
+        {/* Add Players (organizer) */}
         {isOrganizer && (
           <div className="mb-6 rounded-xl border border-border bg-surface-elevated p-4">
             <h2 className="mb-3 text-sm font-semibold text-secondary">
-              Invite Players
+              Add Players
             </h2>
 
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name or email..."
+              placeholder="Search by name..."
               className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
             />
 
@@ -383,23 +430,90 @@ export default function PlayerTournamentPage({
                         <span className="text-sm font-medium text-secondary">
                           {p.firstName} {p.lastName}
                         </span>
-                        <span className="ml-2 text-xs text-text-muted">
-                          {p.email}
-                        </span>
                         {p.handicapIndex != null && (
                           <span className="ml-2 text-xs text-text-muted">
                             HI: {p.handicapIndex.toFixed(1)}
                           </span>
                         )}
+                        {p.registered && (
+                          <span className="ml-2 text-xs text-green-600">
+                            registered
+                          </span>
+                        )}
                       </div>
-                      <button
-                        onClick={() => invitePlayer(p.id)}
-                        className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white hover:bg-primary-dark"
-                      >
-                        Invite
-                      </button>
+                      {p.registered ? (
+                        <button
+                          onClick={() => invitePlayer(p.id)}
+                          className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white hover:bg-primary-dark"
+                        >
+                          Invite
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => addExistingPlayer(p.id)}
+                          className="rounded-lg border border-primary px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/5"
+                        >
+                          Add
+                        </button>
+                      )}
                     </div>
                   ))}
+              </div>
+            )}
+
+            {/* Add Guest button / form */}
+            {!showGuestForm ? (
+              <button
+                type="button"
+                onClick={() => setShowGuestForm(true)}
+                className="mt-3 w-full rounded-lg border border-dashed border-border px-3 py-2.5 text-sm text-text-muted hover:border-primary/30 hover:text-secondary"
+              >
+                + Add a guest (not registered)
+              </button>
+            ) : (
+              <div className="mt-3 space-y-2 rounded-lg border border-border bg-surface p-3">
+                <p className="text-xs font-medium text-secondary">Add Guest Player</p>
+                <div className="grid grid-cols-5 gap-2">
+                  <input
+                    type="text"
+                    placeholder="First Name"
+                    value={guestFirst}
+                    onChange={(e) => setGuestFirst(e.target.value)}
+                    className="col-span-2 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm"
+                    autoFocus
+                  />
+                  <input
+                    type="text"
+                    placeholder="Last Name"
+                    value={guestLast}
+                    onChange={(e) => setGuestLast(e.target.value)}
+                    className="col-span-2 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm"
+                  />
+                  <select
+                    value={guestGender}
+                    onChange={(e) => setGuestGender(e.target.value)}
+                    className="rounded-lg border border-border bg-surface-elevated px-2 py-2 text-sm"
+                  >
+                    <option value="M">M</option>
+                    <option value="F">F</option>
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={addGuest}
+                    className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary-dark"
+                  >
+                    Add Guest
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowGuestForm(false)}
+                    className="text-xs text-text-muted hover:text-secondary"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
 
