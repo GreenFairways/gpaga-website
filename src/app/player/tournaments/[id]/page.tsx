@@ -20,8 +20,9 @@ interface Tournament {
 interface Registration {
   id: string;
   playerId: string;
-  playerName?: string;
-  handicapIndex: number | null;
+  firstName?: string;
+  lastName?: string;
+  handicapIndexAtReg: number | null;
   courseHandicap: number | null;
   playingHandicap: number | null;
   divisionLabel: string | null;
@@ -399,10 +400,12 @@ export default function PlayerTournamentPage({
                   {active.map((r) => (
                     <tr key={r.id} className="border-b border-border/50">
                       <td className="py-2 text-secondary">
-                        {r.playerName || r.playerId}
+                        {r.firstName && r.lastName
+                          ? `${r.firstName} ${r.lastName}`
+                          : r.playerId}
                       </td>
                       <td className="py-2 text-text-muted">
-                        {r.handicapIndex?.toFixed(1) ?? "-"}
+                        {r.handicapIndexAtReg?.toFixed(1) ?? "-"}
                       </td>
                       <td className="py-2 text-text-muted">
                         {r.courseHandicap ?? "-"}
