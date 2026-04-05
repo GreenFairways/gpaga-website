@@ -56,13 +56,13 @@ async function run() {
     {
       label: "A", name: "Division A", format: "strokeplay", holes: 18,
       hcpRange: [-8, 18],
-      tees: [{ gender: "M", teeName: "Silver" }, { gender: "F", teeName: "Green" }],
+      tees: [{ gender: "M", teeName: "Silver" }, { gender: "M", teeName: "White", seniorAge: 60 }, { gender: "F", teeName: "Green" }],
       tieBreak: "lower-handicap",
     },
     {
       label: "B", name: "Division B", format: "stableford", holes: 18,
       hcpRange: [18.1, 36],
-      tees: [{ gender: "M", teeName: "Silver" }, { gender: "F", teeName: "Green" }],
+      tees: [{ gender: "M", teeName: "Silver" }, { gender: "M", teeName: "White", seniorAge: 60 }, { gender: "F", teeName: "Green" }],
       tieBreak: "lower-handicap",
     },
     {
