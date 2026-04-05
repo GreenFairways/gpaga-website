@@ -3,6 +3,21 @@
 import { useState, useEffect, useCallback, use } from "react";
 import Header from "@/components/Header";
 import Link from "next/link";
+import { getCourseInfo } from "@/data/courses/info";
+
+const FORMAT_LABELS: Record<string, string> = {
+  strokeplay: "Stroke Play",
+  stableford: "Stableford",
+  modified_stableford: "Modified Stableford",
+  par_bogey: "Par / Bogey",
+  match_play: "Match Play",
+  skins: "Skins",
+  scramble: "Scramble",
+  best_ball: "Best Ball",
+  shamble: "Shamble",
+  greensome: "Greensome",
+  foursomes: "Foursomes",
+};
 
 interface Tournament {
   id: string;
@@ -353,8 +368,9 @@ export default function PlayerTournamentPage({
             </span>
           </div>
           <p className="mt-2 text-sm text-text-muted">
-            {tournament.date} &middot; {tournament.format} &middot;{" "}
-            {tournament.courseId} ({tournament.teeName})
+            {tournament.date} &middot;{" "}
+            {FORMAT_LABELS[tournament.format] || tournament.format} &middot;{" "}
+            {getCourseInfo(tournament.courseId)?.shortName || tournament.courseId}
           </p>
         </div>
 
