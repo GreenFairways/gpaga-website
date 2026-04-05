@@ -517,7 +517,8 @@ export default function PlayerScoringPage({
                               {h.number}
                             </th>
                           ))}
-                          <th className="py-1 font-bold text-secondary" colSpan={back.length > 0 ? 2 : 1}>OUT</th>
+                          <th className="py-1 font-bold text-secondary">OUT</th>
+                          {back.length > 0 && <th className="py-1"></th>}
                         </tr>
                         <tr className="border-b border-border">
                           <td className="py-0.5 text-left pl-1 text-[10px] text-text-muted">Par</td>
@@ -526,9 +527,10 @@ export default function PlayerScoringPage({
                               {h.par}
                             </td>
                           ))}
-                          <td className="py-0.5 text-[10px] font-semibold text-text-muted" colSpan={back.length > 0 ? 2 : 1}>
+                          <td className="py-0.5 text-[10px] font-semibold text-text-muted">
                             {frontSum.par}
                           </td>
+                          {back.length > 0 && <td></td>}
                         </tr>
                       </thead>
                       <tbody>
@@ -549,9 +551,10 @@ export default function PlayerScoringPage({
                               </td>
                             );
                           })}
-                          <td className="py-1 font-bold text-secondary" colSpan={back.length > 0 ? 2 : 1}>
+                          <td className="py-1 font-bold text-secondary">
                             {frontSum.count > 0 ? frontSum.strokes : "-"}
                           </td>
+                          {back.length > 0 && <td></td>}
                         </tr>
                       </tbody>
                     </table>
