@@ -106,6 +106,9 @@ export default function PlayerScoringPage({
     if (tRes.ok) {
       const t = await tRes.json();
       setTournament(t);
+      if (t.status === "completed") {
+        setShowScorecard(true);
+      }
       try {
         const { courses } = await import("@/data/courses");
         const course = courses[t.courseId];
@@ -438,16 +441,23 @@ export default function PlayerScoringPage({
           {/* Scorecard header */}
           <div className="flex items-center justify-between border-b border-border bg-surface-elevated px-4 py-3">
             <h2 className="text-sm font-bold text-secondary">
-              {isFinishing ? "Final Scorecard" : "Scorecard"}
+              {isFinishing ? "Final Scorecard" : tournament?.status === "completed" ? "Final Scorecard" : "Scorecard"}
             </h2>
-            {!isFinishing && (
+            {!isFinishing && tournament?.status === "completed" ? (
+              <Link
+                href={`/player/tournaments/${id}`}
+                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-secondary"
+              >
+                Back to Game
+              </Link>
+            ) : !isFinishing ? (
               <button
                 onClick={() => setShowScorecard(false)}
                 className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-secondary"
               >
                 Close
               </button>
-            )}
+            ) : null}
           </div>
 
           <div className="flex-1 overflow-auto p-2">
