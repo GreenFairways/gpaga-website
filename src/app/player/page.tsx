@@ -91,7 +91,7 @@ export default function PlayerDashboard() {
               href="/player/tournaments/create"
               className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
             >
-              Create Tournament
+              Create Game
             </Link>
             <Link
               href="/player/profile"
@@ -110,24 +110,24 @@ export default function PlayerDashboard() {
 
         {/* Stat Cards */}
         <div className="mb-8 grid gap-4 sm:grid-cols-3">
-          <StatCard label="My Tournaments" value={tournaments.length} />
+          <StatCard label="My Games" value={tournaments.length} />
           <StatCard label="Upcoming" value={upcoming.length} />
           <StatCard label="Completed" value={completed.length} />
         </div>
 
         {/* Tournament List */}
         <h2 className="mb-4 text-lg font-semibold text-secondary">
-          My Tournaments
+          My Games
         </h2>
 
         {tournaments.length === 0 ? (
           <div className="rounded-2xl border border-border bg-surface-elevated p-8 text-center">
-            <p className="text-text-muted">No tournaments yet.</p>
+            <p className="text-text-muted">No games yet.</p>
             <Link
               href="/player/tournaments/create"
               className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
             >
-              Create your first tournament
+              Create your first game
             </Link>
           </div>
         ) : (
