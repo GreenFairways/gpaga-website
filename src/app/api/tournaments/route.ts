@@ -175,6 +175,32 @@ export async function POST(request: Request) {
       INSERT INTO tournament_organizers (tournament_id, player_id, role)
       VALUES (${tournament.id}, ${creatorId}, 'creator')
     `;
+
+    // Auto-register creator as player
+    try {
+      const { rows: playerRows } = await sql`SELECT * FROM players WHERE id = ${creatorId}`;
+      if (playerRows.length > 0) {
+        const player = playerRows[0];
+        const { getCourseInfo } = await import("@/data/courses/info");
+        const courseInfo = getCourseInfo(courseId);
+        const pGender = player.gender === "F" ? "F" : "M";
+        const pTee = courseInfo?.defaultTees?.[pGender] || teeName;
+        const hi = player.handicap_index != null ? parseFloat(player.handicap_index) : null;
+
+        const { calcRegistrationHandicap, generateAccessCode } = await import("@/lib/tournament/registration");
+        const { courseHandicap, playingHandicap } = calcRegistrationHandicap(
+          hi, courseId, pTee, pGender as "M" | "F", handicapAllowance,
+        );
+        const accessCode = generateAccessCode();
+
+        await sql`
+          INSERT INTO registrations (tournament_id, player_id, handicap_index_at_reg, course_handicap, playing_handicap, tee_name, access_code)
+          VALUES (${tournament.id}, ${creatorId}, ${hi}, ${courseHandicap}, ${playingHandicap}, ${pTee}, ${accessCode})
+        `;
+      }
+    } catch {
+      // Registration failure should not block tournament creation
+    }
   }
 
   return Response.json(mapTournament(tournament), { status: 201 });

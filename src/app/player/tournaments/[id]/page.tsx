@@ -474,20 +474,21 @@ export default function PlayerTournamentPage({
             </div>
           )}
 
+          {/* Start Game button */}
+          {isOrganizer && active.length >= 2 && tournament.status === "draft" && (
+            <div className="mt-4 border-t border-border pt-4">
+              <button
+                onClick={() => updateStatus("in_progress")}
+                className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary-dark"
+              >
+                {tournament.tournamentType === "casual" ? "Start Game" : "Start Tournament"} ({active.length} players)
+              </button>
+            </div>
+          )}
+
           {/* Add players (organizer) */}
           {isOrganizer && (
             <div className="mt-4 border-t border-border pt-4">
-              {/* Add myself */}
-              {!registrations.some((r) => r.playerId === playerId && r.status !== "withdrawn") && (
-                <button
-                  type="button"
-                  onClick={addSelf}
-                  className="mb-3 w-full rounded-lg border border-primary bg-primary/5 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
-                >
-                  + Add myself
-                </button>
-              )}
-
               <input
                 type="text"
                 value={searchQuery}
