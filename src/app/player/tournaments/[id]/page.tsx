@@ -216,6 +216,17 @@ export default function PlayerTournamentPage({
     }
   }
 
+  async function deleteTournament() {
+    if (!confirm("Delete this game? This cannot be undone.")) return;
+    const res = await fetch(`/api/tournaments/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      window.location.href = "/player";
+    } else {
+      const data = await res.json();
+      setStatusMsg(data.error || "Failed to delete");
+    }
+  }
+
   async function addOrganizer(pid: string) {
     setOrgMsg("");
     const res = await fetch(`/api/tournaments/${id}/organizers`, {
@@ -343,6 +354,14 @@ export default function PlayerTournamentPage({
                 </button>
               ))}
             </div>
+            {isCreator && tournament.status === "draft" && (
+              <button
+                onClick={deleteTournament}
+                className="mt-3 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+              >
+                Delete Game
+              </button>
+            )}
             {statusMsg && (
               <p className="mt-2 text-xs text-text-muted">{statusMsg}</p>
             )}
