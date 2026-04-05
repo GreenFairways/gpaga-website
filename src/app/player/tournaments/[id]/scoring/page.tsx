@@ -347,22 +347,28 @@ export default function PlayerScoringPage({
                   -
                 </button>
 
-                {/* Score display */}
+                {/* Score display — tap to confirm */}
                 <div className="flex flex-col items-center">
-                  <div
+                  <button
+                    onClick={() => {
+                      if (score === null) {
+                        saveScore(reg.id, hole.number, hole.par);
+                      }
+                    }}
+                    disabled={isSaving || score !== null}
                     className={`flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold transition-all ${
                       score !== null
                         ? scoreColor
-                        : "border-2 border-dashed border-border text-text-muted"
+                        : "border-2 border-dashed border-primary/40 text-text-muted cursor-pointer hover:border-primary hover:bg-primary/5 active:scale-95"
                     } ${isSaving ? "animate-pulse" : ""}`}
                   >
                     {score !== null ? score : hole.par}
-                  </div>
-                  {score !== null && scoreName && (
-                    <span className="mt-1 text-xs font-medium text-text-muted">
-                      {scoreName}
-                    </span>
-                  )}
+                  </button>
+                  <span className="mt-1 text-xs font-medium text-text-muted">
+                    {score !== null && scoreName
+                      ? scoreName
+                      : "Tap to confirm"}
+                  </span>
                 </div>
 
                 {/* Plus button */}
