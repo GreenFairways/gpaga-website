@@ -80,6 +80,7 @@ export default function PlayerScoringPage({
   const [currentHole, setCurrentHole] = useState(1);
   const [saving, setSaving] = useState<string | null>(null); // regId being saved
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+  const [showScorecard, setShowScorecard] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
   const load = useCallback(async () => {
@@ -232,12 +233,12 @@ export default function PlayerScoringPage({
           >
             &larr; Back
           </Link>
-          <span className="text-xs font-medium text-text-muted">
-            {tournament.name}
-          </span>
-          <span className="text-xs text-text-muted">
-            Par {totalPar}
-          </span>
+          <button
+            onClick={() => setShowScorecard(true)}
+            className="rounded-lg bg-accent px-3 py-1 text-xs font-semibold text-secondary"
+          >
+            Scorecard
+          </button>
         </div>
       </div>
 
@@ -419,6 +420,177 @@ export default function PlayerScoringPage({
           </button>
         </div>
       </div>
+
+      {/* Full Scorecard Overlay */}
+      {showScorecard && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-surface">
+          {/* Scorecard header */}
+          <div className="flex items-center justify-between border-b border-border bg-surface-elevated px-4 py-3">
+            <h2 className="text-sm font-bold text-secondary">Scorecard</h2>
+            <button
+              onClick={() => setShowScorecard(false)}
+              className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-secondary"
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-auto p-2">
+            {sortedRegs.map((reg) => {
+              const total = getPlayerTotal(reg.id);
+              const isMe = reg.playerId === myPlayerId;
+              const front = holes.filter((h) => h.number <= 9);
+              const back = holes.filter((h) => h.number > 9);
+
+              function sumSide(side: CourseHole[]) {
+                let strokes = 0;
+                let par = 0;
+                let count = 0;
+                for (const h of side) {
+                  const s = getPlayerScore(reg.id, h.number);
+                  if (s !== null) { strokes += s; count++; }
+                  par += h.par;
+                }
+                return { strokes, par, count };
+              }
+
+              const frontSum = sumSide(front);
+              const backSum = sumSide(back);
+
+              return (
+                <div key={reg.id} className="mb-3">
+                  <div className="mb-1 flex items-center justify-between px-1">
+                    <span className={`text-xs font-semibold ${isMe ? "text-primary" : "text-secondary"}`}>
+                      {reg.firstName} {reg.lastName}
+                      {isMe && <span className="ml-1 text-[10px] text-primary/60">YOU</span>}
+                    </span>
+                    <span className="text-xs text-text-muted">
+                      PH {reg.playingHandicap ?? "-"}
+                      {total.holes > 0 && (
+                        <span className="ml-2 font-semibold text-secondary">
+                          {total.toPar === 0 ? "E" : total.toPar > 0 ? `+${total.toPar}` : total.toPar}
+                          {" "}({total.strokes})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Front 9 */}
+                  <div className="overflow-x-auto rounded-lg border border-border">
+                    <table className="w-full text-center text-xs">
+                      <thead>
+                        <tr className="bg-accent">
+                          <th className="px-1 py-1 text-left font-medium text-text-muted">Hole</th>
+                          {front.map((h) => (
+                            <th key={h.number} className="w-7 px-0.5 py-1 font-medium text-text-muted">
+                              {h.number}
+                            </th>
+                          ))}
+                          <th className="px-1 py-1 font-bold text-secondary">OUT</th>
+                        </tr>
+                        <tr className="border-b border-border">
+                          <td className="px-1 py-0.5 text-left text-[10px] text-text-muted">Par</td>
+                          {front.map((h) => (
+                            <td key={h.number} className="px-0.5 py-0.5 text-[10px] text-text-muted">
+                              {h.par}
+                            </td>
+                          ))}
+                          <td className="px-1 py-0.5 text-[10px] font-semibold text-text-muted">
+                            {frontSum.par}
+                          </td>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="px-1 py-1 text-left text-[10px] text-text-muted">Score</td>
+                          {front.map((h) => {
+                            const s = getPlayerScore(reg.id, h.number);
+                            const label = s !== null ? getScoreLabel(s, h.par) : null;
+                            return (
+                              <td key={h.number} className="px-0.5 py-1">
+                                {s !== null ? (
+                                  <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${SCORE_COLORS[label!]}`}>
+                                    {s}
+                                  </span>
+                                ) : (
+                                  <span className="text-text-muted">-</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                          <td className="px-1 py-1 font-bold text-secondary">
+                            {frontSum.count > 0 ? frontSum.strokes : "-"}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Back 9 */}
+                  {back.length > 0 && (
+                    <div className="mt-1 overflow-x-auto rounded-lg border border-border">
+                      <table className="w-full text-center text-xs">
+                        <thead>
+                          <tr className="bg-accent">
+                            <th className="px-1 py-1 text-left font-medium text-text-muted">Hole</th>
+                            {back.map((h) => (
+                              <th key={h.number} className="w-7 px-0.5 py-1 font-medium text-text-muted">
+                                {h.number}
+                              </th>
+                            ))}
+                            <th className="px-1 py-1 font-bold text-secondary">IN</th>
+                            <th className="px-1 py-1 font-bold text-secondary">TOT</th>
+                          </tr>
+                          <tr className="border-b border-border">
+                            <td className="px-1 py-0.5 text-left text-[10px] text-text-muted">Par</td>
+                            {back.map((h) => (
+                              <td key={h.number} className="px-0.5 py-0.5 text-[10px] text-text-muted">
+                                {h.par}
+                              </td>
+                            ))}
+                            <td className="px-1 py-0.5 text-[10px] font-semibold text-text-muted">
+                              {backSum.par}
+                            </td>
+                            <td className="px-1 py-0.5 text-[10px] font-semibold text-text-muted">
+                              {frontSum.par + backSum.par}
+                            </td>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="px-1 py-1 text-left text-[10px] text-text-muted">Score</td>
+                            {back.map((h) => {
+                              const s = getPlayerScore(reg.id, h.number);
+                              const label = s !== null ? getScoreLabel(s, h.par) : null;
+                              return (
+                                <td key={h.number} className="px-0.5 py-1">
+                                  {s !== null ? (
+                                    <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${SCORE_COLORS[label!]}`}>
+                                      {s}
+                                    </span>
+                                  ) : (
+                                    <span className="text-text-muted">-</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                            <td className="px-1 py-1 font-bold text-secondary">
+                              {backSum.count > 0 ? backSum.strokes : "-"}
+                            </td>
+                            <td className="px-1 py-1 font-bold text-secondary">
+                              {total.holes > 0 ? total.strokes : "-"}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
