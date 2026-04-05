@@ -267,6 +267,7 @@ export interface Registration {
   handicapIndexAtReg: number | null;
   courseHandicap: number | null;
   playingHandicap: number | null;
+  teeName: string | null;
   divisionLabel: string | null;
   teamId: string | null;
   flightNumber: number | null;

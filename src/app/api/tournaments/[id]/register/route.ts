@@ -171,8 +171,8 @@ export async function POST(
   // 7. Create registration
   const accessCode = generateAccessCode();
   const { rows: regRows } = await sql`
-    INSERT INTO registrations (tournament_id, player_id, handicap_index_at_reg, course_handicap, playing_handicap, division_label, access_code)
-    VALUES (${tournamentId}, ${resolvedPlayerId}, ${hi}, ${courseHandicap}, ${playingHandicap}, ${divisionLabel}, ${accessCode})
+    INSERT INTO registrations (tournament_id, player_id, handicap_index_at_reg, course_handicap, playing_handicap, tee_name, division_label, access_code)
+    VALUES (${tournamentId}, ${resolvedPlayerId}, ${hi}, ${courseHandicap}, ${playingHandicap}, ${teeName}, ${divisionLabel}, ${accessCode})
     RETURNING *
   `;
 

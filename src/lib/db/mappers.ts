@@ -72,6 +72,7 @@ export function mapRegistration(row: any): Registration {
     handicapIndexAtReg: row.handicap_index_at_reg != null ? parseFloat(row.handicap_index_at_reg) : null,
     courseHandicap: row.course_handicap != null ? parseInt(row.course_handicap) : null,
     playingHandicap: row.playing_handicap != null ? parseInt(row.playing_handicap) : null,
+    teeName: row.tee_name || null,
     divisionLabel: row.division_label || null,
     teamId: row.team_id || null,
     flightNumber: row.flight_number,

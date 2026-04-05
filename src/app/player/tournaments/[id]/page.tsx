@@ -40,6 +40,7 @@ interface Registration {
   handicapIndexAtReg: number | null;
   courseHandicap: number | null;
   playingHandicap: number | null;
+  teeName: string | null;
   divisionLabel: string | null;
   status: string;
 }
@@ -433,9 +434,8 @@ export default function PlayerTournamentPage({
                   <tr className="border-b border-border text-xs text-text-muted">
                     <th className="pb-2 font-medium">Player</th>
                     <th className="pb-2 font-medium">HI</th>
-                    <th className="pb-2 font-medium">CH</th>
                     <th className="pb-2 font-medium">PH</th>
-                    <th className="pb-2 font-medium">Division</th>
+                    <th className="pb-2 font-medium">Tee</th>
                     {isOrganizer && <th className="pb-2 font-medium"></th>}
                   </tr>
                 </thead>
@@ -451,13 +451,10 @@ export default function PlayerTournamentPage({
                         {r.handicapIndexAtReg?.toFixed(1) ?? "-"}
                       </td>
                       <td className="py-2 text-text-muted">
-                        {r.courseHandicap ?? "-"}
-                      </td>
-                      <td className="py-2 text-text-muted">
                         {r.playingHandicap ?? "-"}
                       </td>
                       <td className="py-2 text-text-muted">
-                        {r.divisionLabel || "-"}
+                        {r.teeName || "-"}
                       </td>
                       {isOrganizer && (
                         <td className="py-2">

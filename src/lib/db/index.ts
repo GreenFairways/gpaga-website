@@ -72,6 +72,7 @@ export async function initDatabase(): Promise<void> {
       handicap_index_at_reg DECIMAL(4,1),
       course_handicap INT,
       playing_handicap INT,
+      tee_name VARCHAR(50),
       division_label VARCHAR(10),
       flight_number INT,
       group_number INT,
