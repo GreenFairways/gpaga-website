@@ -375,8 +375,8 @@ export default function PlayerTournamentPage({
           </p>
         </div>
 
-        {/* Status Management (organizer) */}
-        {isOrganizer && (
+        {/* Status Management (organizer, only in draft/registration_open) */}
+        {isOrganizer && !["in_progress", "completed"].includes(tournament.status) && (
           <div className="mb-6 rounded-xl border border-border bg-surface-elevated p-4">
             <h2 className="mb-3 text-sm font-semibold text-secondary">
               Tournament Status
@@ -448,7 +448,7 @@ export default function PlayerTournamentPage({
                     <th className="pb-2 font-medium">HI</th>
                     <th className="pb-2 font-medium">PH</th>
                     <th className="pb-2 font-medium">Tee</th>
-                    {isOrganizer && <th className="pb-2 font-medium"></th>}
+                    {isOrganizer && !["in_progress", "completed"].includes(tournament.status) && <th className="pb-2 font-medium"></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -468,7 +468,7 @@ export default function PlayerTournamentPage({
                       <td className="py-2 text-text-muted">
                         {r.teeName || "-"}
                       </td>
-                      {isOrganizer && (
+                      {isOrganizer && !["in_progress", "completed"].includes(tournament.status) && (
                         <td className="py-2">
                           <button
                             onClick={() => removePlayer(r.id)}
@@ -498,8 +498,8 @@ export default function PlayerTournamentPage({
             </div>
           )}
 
-          {/* Add players (organizer) */}
-          {isOrganizer && (
+          {/* Add players (organizer, only before game starts) */}
+          {isOrganizer && !["in_progress", "completed"].includes(tournament.status) && (
             <div className="mt-4 border-t border-border pt-4">
               <input
                 type="text"
@@ -659,8 +659,8 @@ export default function PlayerTournamentPage({
           )}
         </div>
 
-        {/* Co-Organizers (creator only) */}
-        {isCreator && (
+        {/* Co-Organizers (creator only, before game starts) */}
+        {isCreator && !["in_progress", "completed"].includes(tournament.status) && (
           <div className="mb-6 rounded-xl border border-border bg-surface-elevated p-4">
             <h2 className="mb-3 text-sm font-semibold text-secondary">
               Co-Organizers
