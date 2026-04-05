@@ -446,7 +446,7 @@ export default function PlayerTournamentPage({
         {/* Players */}
         <div className="mb-6 rounded-xl border border-border bg-surface-elevated p-4">
           <h2 className="mb-3 text-sm font-semibold text-secondary">
-            Players ({active.length}/{tournament.maxPlayers})
+            Players ({active.length}{!["in_progress", "completed"].includes(tournament.status) ? `/${tournament.maxPlayers}` : ""})
           </h2>
 
           {active.length === 0 ? (
