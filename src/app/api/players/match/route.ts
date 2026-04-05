@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
     SELECT id, first_name, last_name, handicap_index, home_club, gender
     FROM players
     WHERE password_hash IS NULL
+      AND handicap_source = 'amgolf'
       AND first_name ILIKE ${firstPattern}
       AND last_name ILIKE ${lastPattern}
     ORDER BY last_name, first_name
