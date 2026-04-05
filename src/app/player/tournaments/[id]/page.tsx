@@ -418,7 +418,7 @@ export default function PlayerTournamentPage({
               href={`/player/tournaments/${id}/scoring`}
               className="block w-full rounded-xl bg-primary px-4 py-4 text-center text-base font-semibold text-white hover:bg-primary-dark"
             >
-              Enter Scores &rarr;
+              Go to Scores &rarr;
             </Link>
           </div>
         )}
