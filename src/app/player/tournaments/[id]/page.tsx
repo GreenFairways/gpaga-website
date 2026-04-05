@@ -107,6 +107,10 @@ export default function PlayerTournamentPage({
   const [orgResults, setOrgResults] = useState<SearchResult[]>([]);
   const [orgMsg, setOrgMsg] = useState("");
 
+  // Scores & holes (for results view)
+  const [scores, setScores] = useState<{ registrationId: string; holeNumber: number; rawScore: number }[]>([]);
+  const [holes, setHoles] = useState<{ number: number; par: number }[]>([]);
+
   // Status update
   const [statusMsg, setStatusMsg] = useState("");
 
@@ -126,7 +130,23 @@ export default function PlayerTournamentPage({
       fetch(`/api/tournaments/${id}/organizers`),
     ]);
 
-    if (tRes.ok) setTournament(await tRes.json());
+    if (tRes.ok) {
+      const t = await tRes.json();
+      setTournament(t);
+      // Load scores & holes for results view
+      if (["in_progress", "completed"].includes(t.status)) {
+        fetch(`/api/tournaments/${id}/scores`).then(async (r) => {
+          if (r.ok) setScores(await r.json());
+        });
+        try {
+          const { courses } = await import("@/data/courses");
+          const course = courses[t.courseId];
+          if (course) {
+            setHoles(course.holes.map((h: { number: number; par: number }) => ({ number: h.number, par: h.par })));
+          }
+        } catch { /* */ }
+      }
+    }
     if (rRes.ok) setRegistrations(await rRes.json());
     if (iRes?.ok) setInvites(await iRes.json());
     if (oRes.ok) {
@@ -650,6 +670,72 @@ export default function PlayerTournamentPage({
             </div>
           )}
         </div>
+
+        {/* Results (when in_progress or completed) */}
+        {["in_progress", "completed"].includes(tournament.status) && scores.length > 0 && holes.length > 0 && (
+          <div className="mb-6 rounded-xl border border-border bg-surface-elevated p-4">
+            <h2 className="mb-3 text-sm font-semibold text-secondary">
+              {tournament.status === "completed" ? "Results" : "Live Scores"}
+            </h2>
+
+            {/* Leaderboard */}
+            {(() => {
+              const totalPar = holes.reduce((s, h) => s + h.par, 0);
+              const playerResults = active.map((r) => {
+                let strokes = 0;
+                let holesPlayed = 0;
+                for (const h of holes) {
+                  const sc = scores.find((s) => s.registrationId === r.id && s.holeNumber === h.number);
+                  if (sc) { strokes += sc.rawScore; holesPlayed++; }
+                }
+                return { ...r, strokes, holesPlayed, toPar: strokes - totalPar };
+              }).filter((r) => r.holesPlayed > 0).sort((a, b) => a.toPar - b.toPar);
+
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-xs text-text-muted">
+                        <th className="pb-2 font-medium w-8">#</th>
+                        <th className="pb-2 font-medium">Player</th>
+                        <th className="pb-2 font-medium text-right">To Par</th>
+                        <th className="pb-2 font-medium text-right">Gross</th>
+                        <th className="pb-2 font-medium text-right">Thru</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {playerResults.map((r, i) => (
+                        <tr key={r.id} className="border-b border-border/50">
+                          <td className="py-2 text-text-muted">{i + 1}</td>
+                          <td className="py-2 font-medium text-secondary">
+                            {r.firstName} {r.lastName}
+                          </td>
+                          <td className={`py-2 text-right font-bold ${
+                            r.toPar < 0 ? "text-green-600" : r.toPar > 0 ? "text-red-600" : "text-secondary"
+                          }`}>
+                            {r.toPar === 0 ? "E" : r.toPar > 0 ? `+${r.toPar}` : r.toPar}
+                          </td>
+                          <td className="py-2 text-right text-text-muted">{r.strokes}</td>
+                          <td className="py-2 text-right text-text-muted">{r.holesPlayed}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+
+            {/* Scorecard link */}
+            <div className="mt-4 border-t border-border pt-3">
+              <Link
+                href={`/player/tournaments/${id}/scoring`}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                View Full Scorecard &rarr;
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Co-Organizers (creator only, before game starts) */}
         {isCreator && !["in_progress", "completed"].includes(tournament.status) && (
