@@ -485,6 +485,7 @@ export default function PlayerScoringPage({
                         <col className="w-10" />
                         {front.map((h) => <col key={h.number} />)}
                         <col className="w-10" />
+                        {back.length > 0 && <col className="w-10" />}
                       </colgroup>
                       <thead>
                         <tr className="bg-accent">
@@ -494,7 +495,7 @@ export default function PlayerScoringPage({
                               {h.number}
                             </th>
                           ))}
-                          <th className="py-1 font-bold text-secondary">OUT</th>
+                          <th className="py-1 font-bold text-secondary" colSpan={back.length > 0 ? 2 : 1}>OUT</th>
                         </tr>
                         <tr className="border-b border-border">
                           <td className="py-0.5 text-left pl-1 text-[10px] text-text-muted">Par</td>
@@ -503,7 +504,7 @@ export default function PlayerScoringPage({
                               {h.par}
                             </td>
                           ))}
-                          <td className="py-0.5 text-[10px] font-semibold text-text-muted">
+                          <td className="py-0.5 text-[10px] font-semibold text-text-muted" colSpan={back.length > 0 ? 2 : 1}>
                             {frontSum.par}
                           </td>
                         </tr>
@@ -526,7 +527,7 @@ export default function PlayerScoringPage({
                               </td>
                             );
                           })}
-                          <td className="py-1 font-bold text-secondary">
+                          <td className="py-1 font-bold text-secondary" colSpan={back.length > 0 ? 2 : 1}>
                             {frontSum.count > 0 ? frontSum.strokes : "-"}
                           </td>
                         </tr>
