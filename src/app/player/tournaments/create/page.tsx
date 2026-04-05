@@ -25,8 +25,16 @@ const FORMAT_OPTIONS = [
 
 type GameType = "game" | "tournament";
 
+function defaultGameName(firstName: string, type: GameType): string {
+  const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return type === "game"
+    ? `${firstName}'s Game ${today}`
+    : `${firstName}'s Tournament ${today}`;
+}
+
 export default function CreateTournamentPage() {
   const [authed, setAuthed] = useState(false);
+  const [playerName, setPlayerName] = useState("");
   const [gameType, setGameType] = useState<GameType>("game");
   const [form, setForm] = useState({
     name: "",
@@ -36,15 +44,22 @@ export default function CreateTournamentPage() {
     visibility: "private" as string,
     maxPlayers: "4",
   });
+  const [customName, setCustomName] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/auth/me").then((res) => {
+    fetch("/api/auth/me").then(async (res) => {
       if (!res.ok) {
         window.location.href = "/player/login";
         return;
       }
+      const me = await res.json();
+      setPlayerName(me.firstName);
+      setForm((f) => ({
+        ...f,
+        name: defaultGameName(me.firstName, "game"),
+      }));
       setAuthed(true);
     });
   }, []);
@@ -55,11 +70,11 @@ export default function CreateTournamentPage() {
 
   function selectGameType(type: GameType) {
     setGameType(type);
-    if (type === "game") {
-      setForm((f) => ({ ...f, maxPlayers: "4" }));
-    } else {
-      setForm((f) => ({ ...f, maxPlayers: "20" }));
-    }
+    setForm((f) => ({
+      ...f,
+      maxPlayers: type === "game" ? "4" : "20",
+      ...(!customName && playerName ? { name: defaultGameName(playerName, type) } : {}),
+    }));
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -161,7 +176,7 @@ export default function CreateTournamentPage() {
             <input
               type="text"
               value={form.name}
-              onChange={(e) => update("name", e.target.value)}
+              onChange={(e) => { update("name", e.target.value); setCustomName(true); }}
               placeholder={
                 gameType === "game"
                   ? "Saturday Round with Friends"
