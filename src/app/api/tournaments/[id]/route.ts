@@ -57,9 +57,12 @@ export async function PATCH(
 
   const jsonFields = new Set(["flight_config", "divisions"]);
 
+  const allowedSet = new Set(allowed);
+
   for (const [key, value] of Object.entries(body)) {
     const dbKey = camelToSnake[key] || key;
-    if (allowed.includes(dbKey)) {
+    // Strict validation: only exact matches from allowed set, alphanumeric + underscore only
+    if (allowedSet.has(dbKey) && /^[a-z_]+$/.test(dbKey)) {
       fields.push(dbKey);
       values.push(jsonFields.has(dbKey) ? JSON.stringify(value) : value);
     }

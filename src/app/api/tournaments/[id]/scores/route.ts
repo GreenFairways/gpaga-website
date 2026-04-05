@@ -72,9 +72,10 @@ export async function POST(
       }
       enteredBy = "player";
     } else if (accessCode) {
-      // Verify access code
+      // Verify access code belongs to this tournament
       const { rows: regCheck } = await sql`
-        SELECT access_code FROM registrations WHERE id = ${registrationId}
+        SELECT access_code FROM registrations
+        WHERE id = ${registrationId} AND tournament_id = ${id}
       `;
       if (regCheck.length === 0 || regCheck[0].access_code !== accessCode) {
         return Response.json({ error: "Invalid access code" }, { status: 401 });

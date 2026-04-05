@@ -171,8 +171,7 @@ export async function POST(
     details: results,
   });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    const stack = err instanceof Error ? err.stack : undefined;
-    return Response.json({ error: message, stack }, { status: 500 });
+    console.error("Recalculate error:", err instanceof Error ? err.stack : err);
+    return Response.json({ error: "Failed to recalculate scores" }, { status: 500 });
   }
 }

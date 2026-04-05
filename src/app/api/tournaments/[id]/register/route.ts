@@ -101,19 +101,7 @@ export async function POST(
   }
   const player = playerRows[0];
 
-  // 5. Check for duplicate registration
-  const { rows: existingReg } = await sql`
-    SELECT id FROM registrations
-    WHERE tournament_id = ${tournamentId} AND player_id = ${resolvedPlayerId}
-  `;
-  if (existingReg.length > 0) {
-    return Response.json(
-      { error: "Player is already registered for this tournament" },
-      { status: 409 },
-    );
-  }
-
-  // 5b. Auto-refresh HI from AmGolf if linked
+  // 5. Auto-refresh HI from AmGolf if linked
   if (player.amgolf_people_id) {
     try {
       const amgolf = await getAmGolfPlayer(player.amgolf_people_id);
@@ -168,21 +156,31 @@ export async function POST(
     parseFloat(tournament.handicap_allowance),
   );
 
-  // 7. Create registration
+  // 7. Create registration (atomic duplicate check via unique constraint)
   const accessCode = generateAccessCode();
-  const { rows: regRows } = await sql`
-    INSERT INTO registrations (tournament_id, player_id, handicap_index_at_reg, course_handicap, playing_handicap, tee_name, division_label, access_code)
-    VALUES (${tournamentId}, ${resolvedPlayerId}, ${hi}, ${courseHandicap}, ${playingHandicap}, ${teeName}, ${divisionLabel}, ${accessCode})
-    RETURNING *
-  `;
+  try {
+    const { rows: regRows } = await sql`
+      INSERT INTO registrations (tournament_id, player_id, handicap_index_at_reg, course_handicap, playing_handicap, tee_name, division_label, access_code)
+      VALUES (${tournamentId}, ${resolvedPlayerId}, ${hi}, ${courseHandicap}, ${playingHandicap}, ${teeName}, ${divisionLabel}, ${accessCode})
+      RETURNING *
+    `;
 
-  return Response.json(
-    {
-      ...mapRegistration(regRows[0]),
-      playerName: `${player.first_name} ${player.last_name}`,
-      divisionLabel,
-      accessCode,
-    },
-    { status: 201 },
-  );
+    return Response.json(
+      {
+        ...mapRegistration(regRows[0]),
+        playerName: `${player.first_name} ${player.last_name}`,
+        divisionLabel,
+        accessCode,
+      },
+      { status: 201 },
+    );
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes("duplicate key")) {
+      return Response.json(
+        { error: "Player is already registered for this tournament" },
+        { status: 409 },
+      );
+    }
+    throw err;
+  }
 }
