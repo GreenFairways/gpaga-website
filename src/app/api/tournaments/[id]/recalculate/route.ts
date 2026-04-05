@@ -84,14 +84,20 @@ export async function POST(
 
     // Recalculate division + tee
     let divisionLabel: string | null = null;
-    let teeName = tournament.tee_name;
+    let teeName: string;
 
     if (divisions && divisions.length > 0 && hi != null) {
+      teeName = tournament.tee_name;
       const div = assignDivision(divisions, hi);
       if (div) {
         divisionLabel = div.label;
         teeName = getTeeForPlayer(div, gender, dob, tournamentDate);
       }
+    } else {
+      const { getCourseInfo } = await import("@/data/courses/info");
+      const courseInfo = getCourseInfo(tournament.course_id);
+      const g = gender === "F" ? "F" : "M";
+      teeName = courseInfo?.defaultTees?.[g as "M" | "F"] || tournament.tee_name;
     }
 
     const { courseHandicap, playingHandicap } = calcRegistrationHandicap(

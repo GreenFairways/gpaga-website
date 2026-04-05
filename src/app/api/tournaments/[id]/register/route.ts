@@ -133,13 +133,15 @@ export async function POST(
     }
   }
 
-  // 6. Assign division + calculate handicap
+  // 6. Assign division + determine tee
   const hi = player.handicap_index != null ? parseFloat(player.handicap_index) : null;
   const divisions = (tournament.divisions as Division[]) || null;
   let divisionLabel: string | null = null;
-  let teeName = tournament.tee_name;
+  let teeName: string;
 
   if (divisions && divisions.length > 0 && hi != null) {
+    // Official tournament with divisions — use division tee rules
+    teeName = tournament.tee_name;
     const div = assignDivision(divisions, hi);
     if (div) {
       divisionLabel = div.label;
@@ -150,6 +152,12 @@ export async function POST(
         ? tournament.date.toISOString().split("T")[0]
         : tournament.date);
     }
+  } else {
+    // Casual game / no divisions — use club default tees by gender
+    const { getCourseInfo } = await import("@/data/courses/info");
+    const courseInfo = getCourseInfo(tournament.course_id);
+    const gender = player.gender === "F" ? "F" : "M";
+    teeName = courseInfo?.defaultTees?.[gender] || tournament.tee_name;
   }
 
   const { courseHandicap, playingHandicap } = calcRegistrationHandicap(

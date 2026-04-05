@@ -23,6 +23,8 @@ export interface CourseInfo {
   greenFees: GreenFeeTable | null;
   facilities: string[];
   teeNames: string[];
+  /** Default tees by gender for casual games (no divisions) */
+  defaultTees: { M: string; F: string };
 }
 
 export interface GreenFeeTable {
@@ -71,6 +73,7 @@ export const courseInfos: CourseInfo[] = [
       "Club rental",
     ],
     teeNames: ["Gold", "Silver", "White", "Green"],
+    defaultTees: { M: "Silver", F: "Green" },
   },
   {
     slug: "tabori-paragraph",
@@ -100,6 +103,7 @@ export const courseInfos: CourseInfo[] = [
       "Club rental",
     ],
     teeNames: ["Black", "Blue", "White", "Red"],
+    defaultTees: { M: "Blue", F: "Red" },
   },
   {
     slug: "ambassadori-kachreti",
@@ -136,6 +140,7 @@ export const courseInfos: CourseInfo[] = [
       "Horseback riding",
     ],
     teeNames: ["White", "Yellow", "Blue", "Red"],
+    defaultTees: { M: "White", F: "Red" },
   },
 ];
 
