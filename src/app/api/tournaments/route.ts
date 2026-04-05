@@ -108,7 +108,7 @@ export async function POST(request: Request) {
     maxPlayers = 80,
     entryFeeLari = 0,
     rules = "",
-    handicapAllowance = 0.95,
+    handicapAllowance = 1.0,
     flightConfig = null,
     divisions = null,
     formatConfig = {},

@@ -32,7 +32,7 @@ export function mapTournament(row: any): Tournament {
     maxPlayers: row.max_players,
     entryFeeLari: row.entry_fee_lari,
     rules: row.rules || "",
-    handicapAllowance: parseFloat(row.handicap_allowance) || 0.95,
+    handicapAllowance: parseFloat(row.handicap_allowance) || 1.0,
     flightConfig: row.flight_config as FlightConfig | null,
     divisions: row.divisions as Division[] | null,
     formatConfig: (row.format_config as FormatConfig) || {},

@@ -54,7 +54,7 @@ export async function initDatabase(): Promise<void> {
       max_players INT DEFAULT 80,
       entry_fee_lari INT DEFAULT 0,
       rules TEXT DEFAULT '',
-      handicap_allowance DECIMAL(3,2) DEFAULT 0.95,
+      handicap_allowance DECIMAL(3,2) DEFAULT 1.00,
       flight_config JSONB,
       divisions JSONB,
       format_config JSONB DEFAULT '{}',
