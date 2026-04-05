@@ -36,10 +36,14 @@ export async function POST(
 
   const anchorRegId = regRows[0].id;
 
-  // Upsert scores
+  // Upsert scores with validation
   let inserted = 0;
+  let skipped = 0;
   for (const s of scores) {
-    if (s.holeNumber < 1 || s.holeNumber > 18 || s.rawScore < 1) continue;
+    if (s.holeNumber < 1 || s.holeNumber > 18 || s.rawScore < 1 || s.rawScore > 20) {
+      skipped++;
+      continue;
+    }
 
     await sql`
       INSERT INTO scores (registration_id, team_id, hole_number, raw_score, adjusted_score, entered_by)
@@ -51,7 +55,7 @@ export async function POST(
     inserted++;
   }
 
-  return Response.json({ inserted, teamId });
+  return Response.json({ inserted, skipped, total: scores.length, teamId });
 }
 
 /** GET /api/tournaments/[id]/teams/[teamId]/scores — get team scores */

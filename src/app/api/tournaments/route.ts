@@ -137,6 +137,17 @@ export async function POST(request: Request) {
     );
   }
 
+  // Validate ranges
+  if (maxPlayers < 1 || maxPlayers > 500) {
+    return Response.json({ error: "maxPlayers must be 1-500" }, { status: 400 });
+  }
+  if (handicapAllowance < 0 || handicapAllowance > 2.0) {
+    return Response.json({ error: "handicapAllowance must be 0-2.0" }, { status: 400 });
+  }
+  if (entryFeeLari < 0 || entryFeeLari > 50000) {
+    return Response.json({ error: "entryFeeLari must be 0-50000" }, { status: 400 });
+  }
+
   // Default tee: first tee of the course
   const teeName = rawTeeName || (await (async () => {
     const { courseInfos } = await import("@/data/courses/info");

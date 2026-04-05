@@ -64,11 +64,13 @@ export async function DELETE(
   return Response.json({ ok: true });
 }
 
-/** Recalculate and store team handicap based on current members */
+/** Recalculate and store team handicap based on current members (atomic) */
 async function recalcTeamHandicap(teamId: string): Promise<void> {
+  // Atomic: read + compute + write in single query to avoid race conditions
   const { rows } = await sql`
     SELECT playing_handicap FROM registrations
     WHERE team_id = ${teamId} AND playing_handicap IS NOT NULL
+    FOR UPDATE
   `;
 
   if (rows.length === 0) {

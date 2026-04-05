@@ -46,6 +46,8 @@ export async function PATCH(request: Request) {
   }
 
   for (const u of updates) {
+    // Validate column name is safe (defense in depth)
+    if (!/^[a-z_]+$/.test(u.column)) continue;
     await sql.query(
       `UPDATE players SET ${u.column} = $1 WHERE id = $2`,
       [u.value, playerId],

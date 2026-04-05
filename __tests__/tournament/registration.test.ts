@@ -5,9 +5,9 @@ import {
 } from "../../src/lib/tournament/registration";
 
 describe("generateAccessCode", () => {
-  it("generates a 6-character code", () => {
+  it("generates a 12-character code", () => {
     const code = generateAccessCode();
-    expect(code).toHaveLength(6);
+    expect(code).toHaveLength(12);
   });
 
   it("only uses readable characters (no I, O, 0, 1)", () => {

@@ -6,11 +6,11 @@ import { getCourse } from "@/data/courses";
 import { calcFullCourseHandicap } from "@/lib/handicap";
 import type { TeeData, HoleData } from "@/lib/handicap/types";
 
-/** Generate a 6-character alphanumeric access code */
+/** Generate a 12-character alphanumeric access code (HIGH: increased from 6 for entropy) */
 export function generateAccessCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I/O/0/1 for readability
   let code = "";
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 12; i++) {
     code += chars[Math.floor(Math.random() * chars.length)];
   }
   return code;

@@ -66,18 +66,23 @@ export async function PATCH(
   }
 
   // Build SET clauses only for provided fields
+  // Admin can update all fields; players cannot change email (requires verification)
   const fieldMap: Record<string, { column: string; value: unknown }> = {
     firstName: { column: "first_name", value: body.firstName },
     lastName: { column: "last_name", value: body.lastName },
-    email: { column: "email", value: body.email },
     phone: { column: "phone", value: body.phone },
     gender: { column: "gender", value: body.gender },
     handicapIndex: { column: "handicap_index", value: body.handicapIndex },
-    handicapSource: { column: "handicap_source", value: body.handicapSource },
     homeClub: { column: "home_club", value: body.homeClub },
-    amgolfPeopleId: { column: "amgolf_people_id", value: body.amgolfPeopleId },
     dateOfBirth: { column: "date_of_birth", value: body.dateOfBirth },
   };
+
+  // Admin-only fields
+  if (admin) {
+    fieldMap.email = { column: "email", value: body.email };
+    fieldMap.handicapSource = { column: "handicap_source", value: body.handicapSource };
+    fieldMap.amgolfPeopleId = { column: "amgolf_people_id", value: body.amgolfPeopleId };
+  }
 
   const updates: { column: string; value: unknown }[] = [];
   for (const [key, entry] of Object.entries(fieldMap)) {
@@ -90,6 +95,8 @@ export async function PATCH(
 
   // Apply updates one field at a time (Vercel Postgres tagged template limitation)
   for (const u of updates) {
+    // Validate column name is safe (defense in depth)
+    if (!/^[a-z_]+$/.test(u.column)) continue;
     await sql.query(
       `UPDATE players SET ${u.column} = $1 WHERE id = $2`,
       [u.value, id],
