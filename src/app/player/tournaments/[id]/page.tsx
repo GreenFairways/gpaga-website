@@ -408,19 +408,11 @@ export default function PlayerTournamentPage({
             {statusMsg && (
               <p className="mt-2 text-xs text-text-muted">{statusMsg}</p>
             )}
-            {isOrganizer && tournament.status === "in_progress" && (
-              <Link
-                href={`/player/tournaments/${id}/scoring`}
-                className="mt-3 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark"
-              >
-                Enter Scores &rarr;
-              </Link>
-            )}
           </div>
         )}
 
-        {/* Enter Scores CTA for any registered player */}
-        {!isOrganizer && tournament.status === "in_progress" && playerId && active.some((r) => r.playerId === playerId) && (
+        {/* Enter Scores CTA — visible for any registered player when in_progress */}
+        {tournament.status === "in_progress" && playerId && active.some((r) => r.playerId === playerId) && (
           <div className="mb-6">
             <Link
               href={`/player/tournaments/${id}/scoring`}
