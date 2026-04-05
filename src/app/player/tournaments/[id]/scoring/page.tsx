@@ -480,37 +480,42 @@ export default function PlayerScoringPage({
 
                   {/* Front 9 */}
                   <div className="overflow-x-auto rounded-lg border border-border">
-                    <table className="w-full text-center text-xs">
+                    <table className="w-full table-fixed text-center text-xs">
+                      <colgroup>
+                        <col className="w-10" />
+                        {front.map((h) => <col key={h.number} />)}
+                        <col className="w-10" />
+                      </colgroup>
                       <thead>
                         <tr className="bg-accent">
-                          <th className="px-1 py-1 text-left font-medium text-text-muted">Hole</th>
+                          <th className="py-1 text-left pl-1 font-medium text-text-muted">Hole</th>
                           {front.map((h) => (
-                            <th key={h.number} className="w-7 px-0.5 py-1 font-medium text-text-muted">
+                            <th key={h.number} className="py-1 font-medium text-text-muted">
                               {h.number}
                             </th>
                           ))}
-                          <th className="px-1 py-1 font-bold text-secondary">OUT</th>
+                          <th className="py-1 font-bold text-secondary">OUT</th>
                         </tr>
                         <tr className="border-b border-border">
-                          <td className="px-1 py-0.5 text-left text-[10px] text-text-muted">Par</td>
+                          <td className="py-0.5 text-left pl-1 text-[10px] text-text-muted">Par</td>
                           {front.map((h) => (
-                            <td key={h.number} className="px-0.5 py-0.5 text-[10px] text-text-muted">
+                            <td key={h.number} className="py-0.5 text-[10px] text-text-muted">
                               {h.par}
                             </td>
                           ))}
-                          <td className="px-1 py-0.5 text-[10px] font-semibold text-text-muted">
+                          <td className="py-0.5 text-[10px] font-semibold text-text-muted">
                             {frontSum.par}
                           </td>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td className="px-1 py-1 text-left text-[10px] text-text-muted">Score</td>
+                          <td className="py-1 text-left pl-1 text-[10px] text-text-muted">Score</td>
                           {front.map((h) => {
                             const s = getPlayerScore(reg.id, h.number);
                             const label = s !== null ? getScoreLabel(s, h.par) : null;
                             return (
-                              <td key={h.number} className="px-0.5 py-1">
+                              <td key={h.number} className="py-1">
                                 {s !== null ? (
                                   <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${SCORE_COLORS[label!]}`}>
                                     {s}
@@ -521,7 +526,7 @@ export default function PlayerScoringPage({
                               </td>
                             );
                           })}
-                          <td className="px-1 py-1 font-bold text-secondary">
+                          <td className="py-1 font-bold text-secondary">
                             {frontSum.count > 0 ? frontSum.strokes : "-"}
                           </td>
                         </tr>
@@ -532,41 +537,47 @@ export default function PlayerScoringPage({
                   {/* Back 9 */}
                   {back.length > 0 && (
                     <div className="mt-1 overflow-x-auto rounded-lg border border-border">
-                      <table className="w-full text-center text-xs">
+                      <table className="w-full table-fixed text-center text-xs">
+                        <colgroup>
+                          <col className="w-10" />
+                          {back.map((h) => <col key={h.number} />)}
+                          <col className="w-10" />
+                          <col className="w-10" />
+                        </colgroup>
                         <thead>
                           <tr className="bg-accent">
-                            <th className="px-1 py-1 text-left font-medium text-text-muted">Hole</th>
+                            <th className="py-1 text-left pl-1 font-medium text-text-muted">Hole</th>
                             {back.map((h) => (
-                              <th key={h.number} className="w-7 px-0.5 py-1 font-medium text-text-muted">
+                              <th key={h.number} className="py-1 font-medium text-text-muted">
                                 {h.number}
                               </th>
                             ))}
-                            <th className="px-1 py-1 font-bold text-secondary">IN</th>
-                            <th className="px-1 py-1 font-bold text-secondary">TOT</th>
+                            <th className="py-1 font-bold text-secondary">IN</th>
+                            <th className="py-1 font-bold text-secondary">TOT</th>
                           </tr>
                           <tr className="border-b border-border">
-                            <td className="px-1 py-0.5 text-left text-[10px] text-text-muted">Par</td>
+                            <td className="py-0.5 text-left pl-1 text-[10px] text-text-muted">Par</td>
                             {back.map((h) => (
-                              <td key={h.number} className="px-0.5 py-0.5 text-[10px] text-text-muted">
+                              <td key={h.number} className="py-0.5 text-[10px] text-text-muted">
                                 {h.par}
                               </td>
                             ))}
-                            <td className="px-1 py-0.5 text-[10px] font-semibold text-text-muted">
+                            <td className="py-0.5 text-[10px] font-semibold text-text-muted">
                               {backSum.par}
                             </td>
-                            <td className="px-1 py-0.5 text-[10px] font-semibold text-text-muted">
+                            <td className="py-0.5 text-[10px] font-semibold text-text-muted">
                               {frontSum.par + backSum.par}
                             </td>
                           </tr>
                         </thead>
                         <tbody>
                           <tr>
-                            <td className="px-1 py-1 text-left text-[10px] text-text-muted">Score</td>
+                            <td className="py-1 text-left pl-1 text-[10px] text-text-muted">Score</td>
                             {back.map((h) => {
                               const s = getPlayerScore(reg.id, h.number);
                               const label = s !== null ? getScoreLabel(s, h.par) : null;
                               return (
-                                <td key={h.number} className="px-0.5 py-1">
+                                <td key={h.number} className="py-1">
                                   {s !== null ? (
                                     <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${SCORE_COLORS[label!]}`}>
                                       {s}
@@ -577,10 +588,10 @@ export default function PlayerScoringPage({
                                 </td>
                               );
                             })}
-                            <td className="px-1 py-1 font-bold text-secondary">
+                            <td className="py-1 font-bold text-secondary">
                               {backSum.count > 0 ? backSum.strokes : "-"}
                             </td>
-                            <td className="px-1 py-1 font-bold text-secondary">
+                            <td className="py-1 font-bold text-secondary">
                               {total.holes > 0 ? total.strokes : "-"}
                             </td>
                           </tr>
