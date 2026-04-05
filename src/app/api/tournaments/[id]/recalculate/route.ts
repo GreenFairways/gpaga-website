@@ -71,6 +71,7 @@ export async function POST(
     oldDiv: string | null;
     newDiv: string | null;
     scoresUpdated: number;
+    debug?: Record<string, unknown>;
   }[] = [];
 
   for (const reg of regs) {
