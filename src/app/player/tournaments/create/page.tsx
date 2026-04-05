@@ -82,11 +82,13 @@ export default function CreateTournamentPage() {
     setError("");
     setCreating(true);
 
+    const gameName = form.name.trim() || defaultGameName(playerName || "My", gameType);
+
     const res = await fetch("/api/tournaments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: form.name,
+        name: gameName,
         date: form.date,
         courseId: form.courseId,
         format: form.format,
@@ -177,13 +179,8 @@ export default function CreateTournamentPage() {
               type="text"
               value={form.name}
               onChange={(e) => { update("name", e.target.value); setCustomName(true); }}
-              placeholder={
-                gameType === "game"
-                  ? "Saturday Round with Friends"
-                  : "Spring Championship 2026"
-              }
+              placeholder={defaultGameName(playerName || "My", gameType)}
               className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-              required
               autoFocus
             />
           </label>
