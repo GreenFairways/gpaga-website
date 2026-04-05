@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     name,
     date,
     courseId,
-    teeName,
+    teeName: rawTeeName,
     gender = "Mixed",
     format,
     maxPlayers = 80,
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
     name: string;
     date: string;
     courseId: string;
-    teeName: string;
+    teeName?: string;
     gender?: string;
     format: TournamentFormat;
     maxPlayers?: number;
@@ -130,12 +130,19 @@ export async function POST(request: Request) {
     visibility?: TournamentVisibility;
   };
 
-  if (!name || !date || !courseId || !teeName || !format) {
+  if (!name || !date || !courseId || !format) {
     return Response.json(
-      { error: "Missing required fields: name, date, courseId, teeName, format" },
+      { error: "Missing required fields: name, date, courseId, format" },
       { status: 400 },
     );
   }
+
+  // Default tee: first tee of the course
+  const teeName = rawTeeName || (await (async () => {
+    const { courseInfos } = await import("@/data/courses/info");
+    const course = courseInfos.find((c) => c.slug === courseId);
+    return course?.teeNames[0] || "White";
+  })());
 
   // Players can only create casual tournaments
   const tournamentType: TournamentType = admin
