@@ -404,15 +404,18 @@ export default function PlayerScoringPage({
           </div>
 
           <button
-            onClick={() =>
-              currentHole < holes.length && setCurrentHole(currentHole + 1)
-            }
-            disabled={currentHole === holes.length}
+            onClick={() => {
+              if (currentHole < holes.length) {
+                setCurrentHole(currentHole + 1);
+              } else {
+                setShowScorecard(true);
+              }
+            }}
             className={`rounded-xl px-5 py-3 text-sm font-semibold ${
               currentHole === holes.length
                 ? "bg-green-600 text-white"
                 : "bg-primary text-white"
-            } disabled:opacity-30`}
+            }`}
           >
             {currentHole === holes.length
               ? "Finish"
