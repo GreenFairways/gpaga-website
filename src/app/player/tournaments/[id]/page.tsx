@@ -402,13 +402,14 @@ export default function PlayerTournamentPage({
           </div>
         )}
 
-        {/* Registrations */}
+        {/* Players */}
         <div className="mb-6 rounded-xl border border-border bg-surface-elevated p-4">
           <h2 className="mb-3 text-sm font-semibold text-secondary">
-            Registrations ({active.length}/{tournament.maxPlayers})
+            Players ({active.length}/{tournament.maxPlayers})
           </h2>
+
           {active.length === 0 ? (
-            <p className="text-sm text-text-muted">No players registered yet</p>
+            <p className="text-sm text-text-muted">No players yet</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -459,182 +460,178 @@ export default function PlayerTournamentPage({
               </table>
             </div>
           )}
-        </div>
 
-        {/* Add Players (organizer) */}
-        {isOrganizer && (
-          <div className="mb-6 rounded-xl border border-border bg-surface-elevated p-4">
-            <h2 className="mb-3 text-sm font-semibold text-secondary">
-              Add Players
-            </h2>
+          {/* Add players (organizer) */}
+          {isOrganizer && (
+            <div className="mt-4 border-t border-border pt-4">
+              {/* Add myself */}
+              {!registrations.some((r) => r.playerId === playerId && r.status !== "withdrawn") && (
+                <button
+                  type="button"
+                  onClick={addSelf}
+                  className="mb-3 w-full rounded-lg border border-primary bg-primary/5 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
+                >
+                  + Add myself
+                </button>
+              )}
 
-            {/* Add myself button — only if not already registered */}
-            {!registrations.some((r) => r.playerId === playerId && r.status !== "withdrawn") && (
-              <button
-                type="button"
-                onClick={addSelf}
-                className="mb-3 w-full rounded-lg border border-primary bg-primary/5 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
-              >
-                + Add myself
-              </button>
-            )}
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name..."
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+              />
 
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name..."
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-            />
-
-            {searchResults.length > 0 && (
-              <div className="mt-2 space-y-1">
-                {searchResults
-                  .filter((p) => p.id !== playerId)
-                  .map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2"
-                    >
-                      <div>
-                        <span className="text-sm font-medium text-secondary">
-                          {p.firstName} {p.lastName}
-                        </span>
-                        {p.handicapIndex != null && (
-                          <span className="ml-2 text-xs text-text-muted">
-                            HI: {p.handicapIndex.toFixed(1)}
-                          </span>
-                        )}
-                        {p.registered && (
-                          <span className="ml-2 text-xs text-green-600">
-                            registered
-                          </span>
-                        )}
-                      </div>
-                      {p.registered ? (
-                        <button
-                          onClick={() => invitePlayer(p.id)}
-                          className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white hover:bg-primary-dark"
-                        >
-                          Invite
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => addExistingPlayer(p.id)}
-                          className="rounded-lg border border-primary px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/5"
-                        >
-                          Add
-                        </button>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            )}
-
-            {/* Add Guest button / form */}
-            {!showGuestForm ? (
-              <button
-                type="button"
-                onClick={() => setShowGuestForm(true)}
-                className="mt-3 w-full rounded-lg border border-dashed border-border px-3 py-2.5 text-sm text-text-muted hover:border-primary/30 hover:text-secondary"
-              >
-                + Add a guest (not registered)
-              </button>
-            ) : (
-              <div className="mt-3 space-y-2 rounded-lg border border-border bg-surface p-3">
-                <p className="text-xs font-medium text-secondary">Add Guest Player</p>
-                <div className="grid grid-cols-5 gap-2">
-                  <input
-                    type="text"
-                    placeholder="First Name"
-                    value={guestFirst}
-                    onChange={(e) => setGuestFirst(e.target.value)}
-                    className="col-span-2 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm"
-                    autoFocus
-                  />
-                  <input
-                    type="text"
-                    placeholder="Last Name"
-                    value={guestLast}
-                    onChange={(e) => setGuestLast(e.target.value)}
-                    className="col-span-2 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm"
-                  />
-                  <select
-                    value={guestGender}
-                    onChange={(e) => setGuestGender(e.target.value)}
-                    className="rounded-lg border border-border bg-surface-elevated px-2 py-2 text-sm"
-                  >
-                    <option value="M">M</option>
-                    <option value="F">F</option>
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={addGuest}
-                    className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary-dark"
-                  >
-                    Add Guest
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowGuestForm(false)}
-                    className="text-xs text-text-muted hover:text-secondary"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {inviteMsg && (
-              <p className="mt-2 text-xs text-text-muted">{inviteMsg}</p>
-            )}
-
-            {/* Pending invites */}
-            {invites.length > 0 && (
-              <div className="mt-4">
-                <h3 className="mb-2 text-xs font-medium text-text-muted">
-                  Sent Invites
-                </h3>
-                <div className="space-y-1">
-                  {invites.map((inv) => (
-                    <div
-                      key={inv.id}
-                      className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2"
-                    >
-                      <div>
-                        <span className="text-sm text-secondary">
-                          {inv.invitedPlayerName ||
-                            inv.invitedEmail ||
-                            "Unknown"}
-                        </span>
-                        <span
-                          className={`ml-2 text-xs ${
-                            inv.status === "accepted"
-                              ? "text-green-600"
-                              : inv.status === "declined"
-                                ? "text-red-600"
-                                : "text-yellow-600"
-                          }`}
-                        >
-                          {inv.status}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => copyInviteLink(inv.inviteCode)}
-                        className="rounded-lg border border-border px-2 py-1 text-xs text-text-secondary hover:bg-accent"
-                        title="Copy invite link"
+              {searchResults.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {searchResults
+                    .filter((p) => p.id !== playerId)
+                    .map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2"
                       >
-                        Copy Link
-                      </button>
-                    </div>
-                  ))}
+                        <div>
+                          <span className="text-sm font-medium text-secondary">
+                            {p.firstName} {p.lastName}
+                          </span>
+                          {p.handicapIndex != null && (
+                            <span className="ml-2 text-xs text-text-muted">
+                              HI: {p.handicapIndex.toFixed(1)}
+                            </span>
+                          )}
+                          {p.registered && (
+                            <span className="ml-2 text-xs text-green-600">
+                              registered
+                            </span>
+                          )}
+                        </div>
+                        {p.registered ? (
+                          <button
+                            onClick={() => invitePlayer(p.id)}
+                            className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white hover:bg-primary-dark"
+                          >
+                            Invite
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => addExistingPlayer(p.id)}
+                            className="rounded-lg border border-primary px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/5"
+                          >
+                            Add
+                          </button>
+                        )}
+                      </div>
+                    ))}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+
+              {/* Add Guest */}
+              {!showGuestForm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowGuestForm(true)}
+                  className="mt-3 w-full rounded-lg border border-dashed border-border px-3 py-2.5 text-sm text-text-muted hover:border-primary/30 hover:text-secondary"
+                >
+                  + Add a guest (not registered)
+                </button>
+              ) : (
+                <div className="mt-3 space-y-2 rounded-lg border border-border bg-surface p-3">
+                  <p className="text-xs font-medium text-secondary">Add Guest Player</p>
+                  <div className="grid grid-cols-5 gap-2">
+                    <input
+                      type="text"
+                      placeholder="First Name"
+                      value={guestFirst}
+                      onChange={(e) => setGuestFirst(e.target.value)}
+                      className="col-span-2 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm"
+                      autoFocus
+                    />
+                    <input
+                      type="text"
+                      placeholder="Last Name"
+                      value={guestLast}
+                      onChange={(e) => setGuestLast(e.target.value)}
+                      className="col-span-2 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm"
+                    />
+                    <select
+                      value={guestGender}
+                      onChange={(e) => setGuestGender(e.target.value)}
+                      className="rounded-lg border border-border bg-surface-elevated px-2 py-2 text-sm"
+                    >
+                      <option value="M">M</option>
+                      <option value="F">F</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={addGuest}
+                      className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-primary-dark"
+                    >
+                      Add Guest
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowGuestForm(false)}
+                      className="text-xs text-text-muted hover:text-secondary"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {inviteMsg && (
+                <p className="mt-2 text-xs text-text-muted">{inviteMsg}</p>
+              )}
+
+              {/* Pending invites */}
+              {invites.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="mb-2 text-xs font-medium text-text-muted">
+                    Sent Invites
+                  </h3>
+                  <div className="space-y-1">
+                    {invites.map((inv) => (
+                      <div
+                        key={inv.id}
+                        className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2"
+                      >
+                        <div>
+                          <span className="text-sm text-secondary">
+                            {inv.invitedPlayerName ||
+                              inv.invitedEmail ||
+                              "Unknown"}
+                          </span>
+                          <span
+                            className={`ml-2 text-xs ${
+                              inv.status === "accepted"
+                                ? "text-green-600"
+                                : inv.status === "declined"
+                                  ? "text-red-600"
+                                  : "text-yellow-600"
+                            }`}
+                          >
+                            {inv.status}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => copyInviteLink(inv.inviteCode)}
+                          className="rounded-lg border border-border px-2 py-1 text-xs text-text-secondary hover:bg-accent"
+                          title="Copy invite link"
+                        >
+                          Copy Link
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Co-Organizers (creator only) */}
         {isCreator && (
