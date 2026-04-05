@@ -228,6 +228,31 @@ export default function PlayerTournamentPage({
     }
   }
 
+  async function removePlayer(registrationId: string) {
+    const res = await fetch(`/api/tournaments/${id}/registrations/${registrationId}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      load();
+    }
+  }
+
+  async function addSelf() {
+    setInviteMsg("");
+    const res = await fetch(`/api/tournaments/${id}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    if (res.ok) {
+      setInviteMsg("You're in!");
+      load();
+    } else {
+      const data = await res.json();
+      setInviteMsg(data.error || "Failed");
+    }
+  }
+
   async function addOrganizer(pid: string) {
     setOrgMsg("");
     const res = await fetch(`/api/tournaments/${id}/organizers`, {
@@ -394,6 +419,7 @@ export default function PlayerTournamentPage({
                     <th className="pb-2 font-medium">CH</th>
                     <th className="pb-2 font-medium">PH</th>
                     <th className="pb-2 font-medium">Division</th>
+                    {isOrganizer && <th className="pb-2 font-medium"></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -416,6 +442,17 @@ export default function PlayerTournamentPage({
                       <td className="py-2 text-text-muted">
                         {r.divisionLabel || "-"}
                       </td>
+                      {isOrganizer && (
+                        <td className="py-2">
+                          <button
+                            onClick={() => removePlayer(r.id)}
+                            className="text-xs text-red-500 hover:text-red-700"
+                            title="Remove player"
+                          >
+                            &times;
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -430,6 +467,17 @@ export default function PlayerTournamentPage({
             <h2 className="mb-3 text-sm font-semibold text-secondary">
               Add Players
             </h2>
+
+            {/* Add myself button — only if not already registered */}
+            {!registrations.some((r) => r.playerId === playerId && r.status !== "withdrawn") && (
+              <button
+                type="button"
+                onClick={addSelf}
+                className="mb-3 w-full rounded-lg border border-primary bg-primary/5 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/10"
+              >
+                + Add myself
+              </button>
+            )}
 
             <input
               type="text"

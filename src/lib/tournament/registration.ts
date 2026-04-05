@@ -30,10 +30,16 @@ export function calcRegistrationHandicap(
   if (!course) return { courseHandicap: null, playingHandicap: null };
 
   // Find the tee matching name and gender
-  const tee = course.tees.find(
+  let tee = course.tees.find(
     (t: TeeData) =>
       t.name === teeName && (t.gender === gender || t.gender === "Mixed"),
   );
+  // Fallback: if tee not available for this gender, use first tee for their gender
+  if (!tee) {
+    tee = course.tees.find(
+      (t: TeeData) => t.gender === gender || t.gender === "Mixed",
+    );
+  }
   if (!tee) return { courseHandicap: null, playingHandicap: null };
 
   const result = calcFullCourseHandicap(
