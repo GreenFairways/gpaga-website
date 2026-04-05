@@ -1,9 +1,10 @@
 import type { CourseData } from "@/lib/handicap/types";
 
 /**
- * Tabori Paragraph Golf Club
+ * Tabori Paragraph Golf Club (listed as "Tabori Golf Course" on AmGolf)
  * 9 physical holes played as 18. Par 72.
- * SI verified by Stas; CR/Slope are estimated (provisional).
+ * CR/Slope for Black, Blue, White from AmGolf (2026-04-05).
+ * Red tee has no CR/SR on AmGolf yet — kept as provisional estimate.
  */
 export const taboriParagraph: CourseData = {
   id: "tabori-paragraph",
@@ -14,37 +15,37 @@ export const taboriParagraph: CourseData = {
   tees: [
     {
       name: "Black",
-      color: "#1A1A1A",
+      color: "#14181C",
       totalDistance: 5946,
-      courseRating: 74.6,
-      slopeRating: 133,
+      courseRating: 72.4,
+      slopeRating: 145,
       par: 72,
-      ratingProvisional: true,
+      ratingProvisional: false,
       gender: "M",
     },
     {
       name: "Blue",
-      color: "#1E88E5",
+      color: "#538CFF",
       totalDistance: 5496,
-      courseRating: 72.8,
-      slopeRating: 128,
+      courseRating: 70.4,
+      slopeRating: 132,
       par: 72,
-      ratingProvisional: true,
+      ratingProvisional: false,
       gender: "M",
     },
     {
       name: "White",
       color: "#FFFFFF",
       totalDistance: 5094,
-      courseRating: 71.0,
-      slopeRating: 123,
+      courseRating: 68.4,
+      slopeRating: 124,
       par: 72,
-      ratingProvisional: true,
+      ratingProvisional: false,
       gender: "M",
     },
     {
       name: "Red",
-      color: "#E53935",
+      color: "#EE404F",
       totalDistance: 4532,
       courseRating: 68.8,
       slopeRating: 117,
