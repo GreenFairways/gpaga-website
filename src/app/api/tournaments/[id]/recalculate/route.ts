@@ -154,6 +154,7 @@ export async function POST(
       oldDiv: oldDiv,
       newDiv,
       scoresUpdated,
+      debug: { dob, gender, hi, teeName, tournamentDate },
     });
   }
 
