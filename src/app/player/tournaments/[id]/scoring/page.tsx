@@ -80,20 +80,27 @@ export default function PlayerScoringPage({
   const [currentHole, setCurrentHole] = useState(1);
   const [saving, setSaving] = useState<string | null>(null); // regId being saved
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+  const [isOrganizer, setIsOrganizer] = useState(false);
   const [showScorecard, setShowScorecard] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
   const load = useCallback(async () => {
-    const [meRes, tRes, rRes, sRes] = await Promise.all([
+    const [meRes, tRes, rRes, sRes, oRes] = await Promise.all([
       fetch("/api/auth/me"),
       fetch(`/api/tournaments/${id}`),
       fetch(`/api/tournaments/${id}/registrations`),
       fetch(`/api/tournaments/${id}/scores`),
+      fetch(`/api/tournaments/${id}/organizers`),
     ]);
 
     if (meRes.ok) {
       const me = await meRes.json();
       setMyPlayerId(me.id);
+      if (oRes.ok) {
+        const orgs = await oRes.json();
+        setIsOrganizer(orgs.some((o: { playerId: string }) => o.playerId === me.id));
+      }
     }
 
     if (tRes.ok) {
@@ -408,6 +415,7 @@ export default function PlayerScoringPage({
               if (currentHole < holes.length) {
                 setCurrentHole(currentHole + 1);
               } else {
+                setIsFinishing(true);
                 setShowScorecard(true);
               }
             }}
@@ -429,13 +437,17 @@ export default function PlayerScoringPage({
         <div className="fixed inset-0 z-50 flex flex-col bg-surface">
           {/* Scorecard header */}
           <div className="flex items-center justify-between border-b border-border bg-surface-elevated px-4 py-3">
-            <h2 className="text-sm font-bold text-secondary">Scorecard</h2>
-            <button
-              onClick={() => setShowScorecard(false)}
-              className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-secondary"
-            >
-              Close
-            </button>
+            <h2 className="text-sm font-bold text-secondary">
+              {isFinishing ? "Final Scorecard" : "Scorecard"}
+            </h2>
+            {!isFinishing && (
+              <button
+                onClick={() => setShowScorecard(false)}
+                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-secondary"
+              >
+                Close
+              </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-auto p-2">
@@ -604,6 +616,47 @@ export default function PlayerScoringPage({
               );
             })}
           </div>
+
+          {/* Bottom actions */}
+          {isFinishing && isOrganizer && (
+            <div className="border-t border-border bg-surface-elevated px-4 py-4 space-y-2">
+              <button
+                onClick={async () => {
+                  await fetch(`/api/tournaments/${id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ status: "completed" }),
+                  });
+                  window.location.href = `/player/tournaments/${id}`;
+                }}
+                className="w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700"
+              >
+                Complete Game
+              </button>
+              <button
+                onClick={() => { setIsFinishing(false); setShowScorecard(false); }}
+                className="w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-secondary"
+              >
+                Edit Scores
+              </button>
+            </div>
+          )}
+          {isFinishing && !isOrganizer && (
+            <div className="border-t border-border bg-surface-elevated px-4 py-4 space-y-2">
+              <Link
+                href={`/player/tournaments/${id}`}
+                className="block w-full rounded-xl bg-primary px-4 py-3 text-center text-sm font-semibold text-white"
+              >
+                Back to Game
+              </Link>
+              <button
+                onClick={() => { setIsFinishing(false); setShowScorecard(false); }}
+                className="w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-secondary"
+              >
+                Edit Scores
+              </button>
+            </div>
+          )}
         </div>
       )}
     </main>
