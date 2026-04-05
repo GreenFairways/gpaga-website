@@ -1,0 +1,529 @@
+"use client";
+
+import { useState, useEffect, useCallback, use } from "react";
+import Header from "@/components/Header";
+import Link from "next/link";
+
+interface Tournament {
+  id: string;
+  name: string;
+  date: string;
+  format: string;
+  status: string;
+  tournamentType: string;
+  visibility: string;
+  courseId: string;
+  teeName: string;
+  maxPlayers: number;
+}
+
+interface Registration {
+  id: string;
+  playerId: string;
+  playerName?: string;
+  handicapIndex: number | null;
+  courseHandicap: number | null;
+  playingHandicap: number | null;
+  divisionLabel: string | null;
+  status: string;
+}
+
+interface Invite {
+  id: string;
+  invitedPlayerId: string | null;
+  invitedPlayerName: string | null;
+  invitedEmail: string | null;
+  inviteCode: string;
+  status: string;
+}
+
+interface Organizer {
+  id: string;
+  playerId: string;
+  role: string;
+  playerName: string;
+  email: string;
+}
+
+interface SearchResult {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  handicapIndex: number | null;
+}
+
+const STATUS_OPTIONS = [
+  "draft",
+  "registration_open",
+  "in_progress",
+  "completed",
+];
+
+export default function PlayerTournamentPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+
+  const [playerId, setPlayerId] = useState<string | null>(null);
+  const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [invites, setInvites] = useState<Invite[]>([]);
+  const [organizers, setOrganizers] = useState<Organizer[]>([]);
+  const [isOrganizer, setIsOrganizer] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
+
+  // Invite search
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [inviteMsg, setInviteMsg] = useState("");
+
+  // Co-organizer search
+  const [orgQuery, setOrgQuery] = useState("");
+  const [orgResults, setOrgResults] = useState<SearchResult[]>([]);
+  const [orgMsg, setOrgMsg] = useState("");
+
+  // Status update
+  const [statusMsg, setStatusMsg] = useState("");
+
+  const load = useCallback(async () => {
+    const meRes = await fetch("/api/auth/me");
+    if (!meRes.ok) {
+      window.location.href = "/player/login";
+      return;
+    }
+    const me = await meRes.json();
+    setPlayerId(me.id);
+
+    const [tRes, rRes, iRes, oRes] = await Promise.all([
+      fetch(`/api/tournaments/${id}`),
+      fetch(`/api/tournaments/${id}/registrations`),
+      fetch(`/api/tournaments/${id}/invites`).catch(() => null),
+      fetch(`/api/tournaments/${id}/organizers`),
+    ]);
+
+    if (tRes.ok) setTournament(await tRes.json());
+    if (rRes.ok) setRegistrations(await rRes.json());
+    if (iRes?.ok) setInvites(await iRes.json());
+    if (oRes.ok) {
+      const orgs: Organizer[] = await oRes.json();
+      setOrganizers(orgs);
+      setIsOrganizer(orgs.some((o) => o.playerId === me.id));
+      setIsCreator(
+        orgs.some((o) => o.playerId === me.id && o.role === "creator"),
+      );
+    }
+  }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Debounced player search for invites
+  useEffect(() => {
+    if (searchQuery.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const res = await fetch(
+        `/api/players/search?q=${encodeURIComponent(searchQuery)}`,
+      );
+      if (res.ok) setSearchResults(await res.json());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Debounced search for co-organizers
+  useEffect(() => {
+    if (orgQuery.length < 2) {
+      setOrgResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const res = await fetch(
+        `/api/players/search?q=${encodeURIComponent(orgQuery)}`,
+      );
+      if (res.ok) setOrgResults(await res.json());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [orgQuery]);
+
+  async function invitePlayer(pid: string) {
+    setInviteMsg("");
+    const res = await fetch(`/api/tournaments/${id}/invites`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId: pid }),
+    });
+    if (res.ok) {
+      setInviteMsg("Invited!");
+      setSearchQuery("");
+      setSearchResults([]);
+      load();
+    } else {
+      const data = await res.json();
+      setInviteMsg(data.error || "Failed");
+    }
+  }
+
+  async function addOrganizer(pid: string) {
+    setOrgMsg("");
+    const res = await fetch(`/api/tournaments/${id}/organizers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId: pid }),
+    });
+    if (res.ok) {
+      setOrgMsg("Added!");
+      setOrgQuery("");
+      setOrgResults([]);
+      load();
+    } else {
+      const data = await res.json();
+      setOrgMsg(data.error || "Failed");
+    }
+  }
+
+  async function removeOrganizer(pid: string) {
+    const res = await fetch(`/api/tournaments/${id}/organizers`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId: pid }),
+    });
+    if (res.ok) load();
+  }
+
+  async function updateStatus(newStatus: string) {
+    setStatusMsg("");
+    const res = await fetch(`/api/tournaments/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    if (res.ok) {
+      setStatusMsg(`Status updated to ${newStatus.replace(/_/g, " ")}`);
+      load();
+    } else {
+      const data = await res.json();
+      setStatusMsg(data.error || "Failed");
+    }
+  }
+
+  function copyInviteLink(code: string) {
+    const url = `${window.location.origin}/invite/${code}`;
+    navigator.clipboard.writeText(url);
+    setInviteMsg("Link copied!");
+  }
+
+  if (!tournament) {
+    return (
+      <>
+        <Header />
+        <main
+          id="main"
+          className="flex min-h-[60vh] items-center justify-center"
+        >
+          <p className="text-text-muted">Loading...</p>
+        </main>
+      </>
+    );
+  }
+
+  const active = registrations.filter((r) => r.status !== "withdrawn");
+
+  return (
+    <>
+      <Header />
+      <main id="main" className="mx-auto max-w-5xl px-6 py-10 lg:px-8">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <Link
+            href="/player"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            &larr; Dashboard
+          </Link>
+        </div>
+
+        <div className="mb-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-bold text-secondary">
+              {tournament.name}
+            </h1>
+            <span className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-secondary">
+              {tournament.visibility}
+            </span>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                tournament.status === "completed"
+                  ? "bg-green-100 text-green-800"
+                  : tournament.status === "in_progress"
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-yellow-100 text-yellow-800"
+              }`}
+            >
+              {tournament.status.replace(/_/g, " ")}
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-text-muted">
+            {tournament.date} &middot; {tournament.format} &middot;{" "}
+            {tournament.courseId} ({tournament.teeName})
+          </p>
+        </div>
+
+        {/* Status Management (organizer) */}
+        {isOrganizer && (
+          <div className="mb-6 rounded-xl border border-border bg-surface-elevated p-4">
+            <h2 className="mb-3 text-sm font-semibold text-secondary">
+              Tournament Status
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {STATUS_OPTIONS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => updateStatus(s)}
+                  disabled={s === tournament.status}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                    s === tournament.status
+                      ? "bg-primary text-white"
+                      : "border border-border text-text-secondary hover:bg-accent"
+                  }`}
+                >
+                  {s.replace(/_/g, " ")}
+                </button>
+              ))}
+            </div>
+            {statusMsg && (
+              <p className="mt-2 text-xs text-text-muted">{statusMsg}</p>
+            )}
+            {isOrganizer && tournament.status === "in_progress" && (
+              <Link
+                href={`/admin/tournaments/${id}/scoring`}
+                className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
+              >
+                Enter Scores &rarr;
+              </Link>
+            )}
+          </div>
+        )}
+
+        {/* Registrations */}
+        <div className="mb-6 rounded-xl border border-border bg-surface-elevated p-4">
+          <h2 className="mb-3 text-sm font-semibold text-secondary">
+            Registrations ({active.length}/{tournament.maxPlayers})
+          </h2>
+          {active.length === 0 ? (
+            <p className="text-sm text-text-muted">No players registered yet</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border text-xs text-text-muted">
+                    <th className="pb-2 font-medium">Player</th>
+                    <th className="pb-2 font-medium">HI</th>
+                    <th className="pb-2 font-medium">CH</th>
+                    <th className="pb-2 font-medium">PH</th>
+                    <th className="pb-2 font-medium">Division</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {active.map((r) => (
+                    <tr key={r.id} className="border-b border-border/50">
+                      <td className="py-2 text-secondary">
+                        {r.playerName || r.playerId}
+                      </td>
+                      <td className="py-2 text-text-muted">
+                        {r.handicapIndex?.toFixed(1) ?? "-"}
+                      </td>
+                      <td className="py-2 text-text-muted">
+                        {r.courseHandicap ?? "-"}
+                      </td>
+                      <td className="py-2 text-text-muted">
+                        {r.playingHandicap ?? "-"}
+                      </td>
+                      <td className="py-2 text-text-muted">
+                        {r.divisionLabel || "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Invite Players (organizer) */}
+        {isOrganizer && (
+          <div className="mb-6 rounded-xl border border-border bg-surface-elevated p-4">
+            <h2 className="mb-3 text-sm font-semibold text-secondary">
+              Invite Players
+            </h2>
+
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name or email..."
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+            />
+
+            {searchResults.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {searchResults
+                  .filter((p) => p.id !== playerId)
+                  .map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2"
+                    >
+                      <div>
+                        <span className="text-sm font-medium text-secondary">
+                          {p.firstName} {p.lastName}
+                        </span>
+                        <span className="ml-2 text-xs text-text-muted">
+                          {p.email}
+                        </span>
+                        {p.handicapIndex != null && (
+                          <span className="ml-2 text-xs text-text-muted">
+                            HI: {p.handicapIndex.toFixed(1)}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => invitePlayer(p.id)}
+                        className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white hover:bg-primary-dark"
+                      >
+                        Invite
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            {inviteMsg && (
+              <p className="mt-2 text-xs text-text-muted">{inviteMsg}</p>
+            )}
+
+            {/* Pending invites */}
+            {invites.length > 0 && (
+              <div className="mt-4">
+                <h3 className="mb-2 text-xs font-medium text-text-muted">
+                  Sent Invites
+                </h3>
+                <div className="space-y-1">
+                  {invites.map((inv) => (
+                    <div
+                      key={inv.id}
+                      className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2"
+                    >
+                      <div>
+                        <span className="text-sm text-secondary">
+                          {inv.invitedPlayerName ||
+                            inv.invitedEmail ||
+                            "Unknown"}
+                        </span>
+                        <span
+                          className={`ml-2 text-xs ${
+                            inv.status === "accepted"
+                              ? "text-green-600"
+                              : inv.status === "declined"
+                                ? "text-red-600"
+                                : "text-yellow-600"
+                          }`}
+                        >
+                          {inv.status}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => copyInviteLink(inv.inviteCode)}
+                        className="rounded-lg border border-border px-2 py-1 text-xs text-text-secondary hover:bg-accent"
+                        title="Copy invite link"
+                      >
+                        Copy Link
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Co-Organizers (creator only) */}
+        {isCreator && (
+          <div className="mb-6 rounded-xl border border-border bg-surface-elevated p-4">
+            <h2 className="mb-3 text-sm font-semibold text-secondary">
+              Co-Organizers
+            </h2>
+
+            <div className="mb-3 space-y-1">
+              {organizers.map((o) => (
+                <div
+                  key={o.id}
+                  className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2"
+                >
+                  <div>
+                    <span className="text-sm font-medium text-secondary">
+                      {o.playerName}
+                    </span>
+                    <span className="ml-2 text-xs text-text-muted">
+                      {o.role.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                  {o.role !== "creator" && (
+                    <button
+                      onClick={() => removeOrganizer(o.playerId)}
+                      className="text-xs text-red-600 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <input
+              type="text"
+              value={orgQuery}
+              onChange={(e) => setOrgQuery(e.target.value)}
+              placeholder="Search to add co-organizer..."
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+            />
+
+            {orgResults.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {orgResults
+                  .filter(
+                    (p) => !organizers.some((o) => o.playerId === p.id),
+                  )
+                  .map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2"
+                    >
+                      <span className="text-sm text-secondary">
+                        {p.firstName} {p.lastName}
+                      </span>
+                      <button
+                        onClick={() => addOrganizer(p.id)}
+                        className="rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white hover:bg-primary-dark"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            {orgMsg && (
+              <p className="mt-2 text-xs text-text-muted">{orgMsg}</p>
+            )}
+          </div>
+        )}
+      </main>
+    </>
+  );
+}

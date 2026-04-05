@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -16,6 +16,16 @@ const navLinks = [
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [playerName, setPlayerName] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.firstName) setPlayerName(data.firstName);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-surface-elevated/80 backdrop-blur-md">
@@ -60,12 +70,21 @@ export default function Header() {
         </ul>
 
         {/* CTA */}
-        <Link
-          href="/membership"
-          className="hidden rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark md:inline-flex"
-        >
-          Become a Member
-        </Link>
+        {playerName ? (
+          <Link
+            href="/player"
+            className="hidden rounded-lg border border-primary px-5 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-white md:inline-flex"
+          >
+            Dashboard
+          </Link>
+        ) : (
+          <Link
+            href="/player/login"
+            className="hidden rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark md:inline-flex"
+          >
+            Log In
+          </Link>
+        )}
 
         {/* Mobile toggle */}
         <button
@@ -116,13 +135,23 @@ export default function Header() {
               </li>
             ))}
             <li>
-              <Link
-                href="/membership"
-                className="mt-2 block rounded-lg bg-primary px-3 py-2.5 text-center text-base font-semibold text-white"
-                onClick={() => setMobileOpen(false)}
-              >
-                Become a Member
-              </Link>
+              {playerName ? (
+                <Link
+                  href="/player"
+                  className="mt-2 block rounded-lg border border-primary px-3 py-2.5 text-center text-base font-semibold text-primary"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <Link
+                  href="/player/login"
+                  className="mt-2 block rounded-lg bg-primary px-3 py-2.5 text-center text-base font-semibold text-white"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Log In
+                </Link>
+              )}
             </li>
           </ul>
         </div>
