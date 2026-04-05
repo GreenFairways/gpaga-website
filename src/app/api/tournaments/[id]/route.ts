@@ -37,7 +37,7 @@ export async function PATCH(
   const allowed = [
     "name", "date", "course_id", "tee_name", "gender", "format",
     "status", "max_players", "entry_fee_lari", "rules",
-    "handicap_allowance", "flight_config",
+    "handicap_allowance", "flight_config", "divisions",
   ];
 
   // Map camelCase to snake_case
@@ -54,7 +54,7 @@ export async function PATCH(
     const dbKey = camelToSnake[key] || key;
     if (allowed.includes(dbKey)) {
       fields.push(dbKey);
-      values.push(dbKey === "flight_config" ? JSON.stringify(value) : value);
+      values.push(dbKey === "flight_config" || dbKey === "divisions" ? JSON.stringify(value) : value);
     }
   }
 
