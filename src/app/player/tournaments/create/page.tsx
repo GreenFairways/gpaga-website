@@ -26,10 +26,9 @@ const FORMAT_OPTIONS = [
 type GameType = "game" | "tournament";
 
 function defaultGameName(firstName: string, type: GameType): string {
-  const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
   return type === "game"
-    ? `${firstName}'s Game ${today}`
-    : `${firstName}'s Tournament ${today}`;
+    ? `${firstName}'s Game`
+    : `${firstName}'s Tournament`;
 }
 
 export default function CreateTournamentPage() {
