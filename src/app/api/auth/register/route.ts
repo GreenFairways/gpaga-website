@@ -13,7 +13,7 @@ import { mapPlayer } from "@/lib/db/mappers";
  */
 export async function POST(request: Request) {
   const body = await request.json();
-  const { email, password, firstName, lastName, gender, phone, handicapIndex, homeClub } = body;
+  const { email, password, firstName, lastName, gender, phone, handicapIndex, homeClub, claimPlayerId } = body;
 
   if (!email || !password || !firstName || !lastName || !gender) {
     return Response.json(
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Claim existing admin-created account
+    // Claim existing admin-created account (matched by email)
     const hash = await hashPassword(password);
     await sql`
       UPDATE players
@@ -59,6 +59,25 @@ export async function POST(request: Request) {
       WHERE id = ${existing[0].id} AND password_hash IS NULL
     `;
     playerId = existing[0].id;
+  } else if (claimPlayerId) {
+    // Claim a specific unclaimed profile (matched by name during registration)
+    const { rows: claimRows } = await sql`
+      SELECT id, password_hash FROM players WHERE id = ${claimPlayerId}
+    `;
+    if (claimRows.length === 0) {
+      return Response.json({ error: "Player profile not found" }, { status: 404 });
+    }
+    if (claimRows[0].password_hash) {
+      return Response.json({ error: "This profile is already claimed" }, { status: 409 });
+    }
+
+    const hash = await hashPassword(password);
+    await sql`
+      UPDATE players
+      SET password_hash = ${hash}, email = ${email}
+      WHERE id = ${claimPlayerId} AND password_hash IS NULL
+    `;
+    playerId = claimPlayerId;
   } else {
     // Create new player
     const hash = await hashPassword(password);

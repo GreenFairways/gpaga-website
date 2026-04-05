@@ -1,8 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Link from "next/link";
+
+interface MatchedProfile {
+  id: string;
+  firstName: string;
+  lastName: string;
+  handicapIndex: number | null;
+  homeClub: string | null;
+  gender: string;
+}
 
 export default function PlayerRegisterPage() {
   const [form, setForm] = useState({
@@ -16,8 +25,42 @@ export default function PlayerRegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Profile matching
+  const [matches, setMatches] = useState<MatchedProfile[]>([]);
+  const [claimProfile, setClaimProfile] = useState<MatchedProfile | null>(null);
+
   function update(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
+    // Clear claim if name changes
+    if (field === "firstName" || field === "lastName") {
+      setClaimProfile(null);
+    }
+  }
+
+  // Debounced profile matching when both names have 2+ chars
+  useEffect(() => {
+    if (claimProfile) return; // Don't search if already claimed
+    if (form.firstName.length < 2 || form.lastName.length < 2) {
+      setMatches([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const res = await fetch(
+        `/api/players/match?firstName=${encodeURIComponent(form.firstName)}&lastName=${encodeURIComponent(form.lastName)}`,
+      );
+      if (res.ok) setMatches(await res.json());
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [form.firstName, form.lastName, claimProfile]);
+
+  function selectProfile(profile: MatchedProfile) {
+    setClaimProfile(profile);
+    setForm((f) => ({ ...f, gender: profile.gender || f.gender }));
+    setMatches([]);
+  }
+
+  function clearClaim() {
+    setClaimProfile(null);
   }
 
   async function handleRegister(e: React.FormEvent) {
@@ -39,11 +82,12 @@ export default function PlayerRegisterPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        firstName: form.firstName,
-        lastName: form.lastName,
+        firstName: claimProfile?.firstName || form.firstName,
+        lastName: claimProfile?.lastName || form.lastName,
         email: form.email,
         gender: form.gender,
         password: form.password,
+        ...(claimProfile ? { claimPlayerId: claimProfile.id } : {}),
       }),
     });
 
@@ -71,25 +115,93 @@ export default function PlayerRegisterPage() {
             Create Account
           </h1>
 
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              type="text"
-              placeholder="First Name"
-              value={form.firstName}
-              onChange={(e) => update("firstName", e.target.value)}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-              required
-              autoFocus
-            />
-            <input
-              type="text"
-              placeholder="Last Name"
-              value={form.lastName}
-              onChange={(e) => update("lastName", e.target.value)}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-              required
-            />
-          </div>
+          {/* Claimed profile banner */}
+          {claimProfile && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-secondary">
+                    Linking to existing profile
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    {claimProfile.firstName} {claimProfile.lastName}
+                    {claimProfile.handicapIndex != null &&
+                      ` · HI: ${claimProfile.handicapIndex.toFixed(1)}`}
+                    {claimProfile.homeClub && ` · ${claimProfile.homeClub}`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearClaim}
+                  className="text-xs text-text-muted hover:text-secondary"
+                >
+                  Change
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!claimProfile && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  placeholder="First Name"
+                  value={form.firstName}
+                  onChange={(e) => update("firstName", e.target.value)}
+                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                  required
+                  autoFocus
+                />
+                <input
+                  type="text"
+                  placeholder="Last Name"
+                  value={form.lastName}
+                  onChange={(e) => update("lastName", e.target.value)}
+                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                  required
+                />
+              </div>
+
+              {/* Profile suggestions */}
+              {matches.length > 0 && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <p className="mb-2 text-xs font-medium text-secondary">
+                    We found existing profiles. Is this you?
+                  </p>
+                  <div className="space-y-1.5">
+                    {matches.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => selectProfile(m)}
+                        className="flex w-full items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-left transition-colors hover:border-primary/40"
+                      >
+                        <div>
+                          <span className="text-sm font-medium text-secondary">
+                            {m.firstName} {m.lastName}
+                          </span>
+                          {m.handicapIndex != null && (
+                            <span className="ml-2 text-xs text-text-muted">
+                              HI: {m.handicapIndex.toFixed(1)}
+                            </span>
+                          )}
+                          {m.homeClub && (
+                            <span className="ml-2 text-xs text-text-muted">
+                              {m.homeClub}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs font-medium text-primary">
+                          That&apos;s me
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
 
           <input
             type="email"
@@ -100,14 +212,16 @@ export default function PlayerRegisterPage() {
             required
           />
 
-          <select
-            value={form.gender}
-            onChange={(e) => update("gender", e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-          >
-            <option value="M">Male</option>
-            <option value="F">Female</option>
-          </select>
+          {!claimProfile && (
+            <select
+              value={form.gender}
+              onChange={(e) => update("gender", e.target.value)}
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+            >
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <input
@@ -137,7 +251,11 @@ export default function PlayerRegisterPage() {
             disabled={loading}
             className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
           >
-            {loading ? "Creating account..." : "Register"}
+            {loading
+              ? "Creating account..."
+              : claimProfile
+                ? "Claim Profile & Register"
+                : "Register"}
           </button>
 
           <p className="text-center text-sm text-text-muted">
