@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { sql } from "@/lib/db";
 import { isAdmin } from "@/lib/auth/session";
+import { getAuthenticatedPlayerId } from "@/lib/auth/player-session";
 import { mapPlayer } from "@/lib/db/mappers";
 
 /** GET /api/players/[id] — get player details with tournament history */
@@ -45,16 +46,18 @@ export async function GET(
   });
 }
 
-/** PATCH /api/players/[id] — update player fields (admin only) */
+/** PATCH /api/players/[id] — update player fields (admin or self) */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdmin())) {
+  const { id } = await params;
+  const admin = await isAdmin();
+  const authenticatedPlayerId = await getAuthenticatedPlayerId();
+
+  if (!admin && authenticatedPlayerId !== id) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const { id } = await params;
   const body = await request.json();
 
   const { rows: existing } = await sql`SELECT * FROM players WHERE id = ${id}`;

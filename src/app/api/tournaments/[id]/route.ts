@@ -1,9 +1,9 @@
 import type { NextRequest } from "next/server";
 import { sql } from "@/lib/db";
-import { isAdmin } from "@/lib/auth/session";
 import { mapTournament } from "@/lib/db/mappers";
+import { canManageTournament, isCreatorOrAdmin, canViewTournament } from "@/lib/auth/permissions";
 
-/** GET /api/tournaments/[id] — get tournament details */
+/** GET /api/tournaments/[id] — get tournament details (respects visibility) */
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -15,19 +15,24 @@ export async function GET(
     return Response.json({ error: "Tournament not found" }, { status: 404 });
   }
 
+  if (!(await canViewTournament(id))) {
+    return Response.json({ error: "Tournament not found" }, { status: 404 });
+  }
+
   return Response.json(mapTournament(rows[0]));
 }
 
-/** PATCH /api/tournaments/[id] — update tournament (admin only) */
+/** PATCH /api/tournaments/[id] — update tournament (admin or organizer) */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdmin())) {
+  const { id } = await params;
+
+  if (!(await canManageTournament(id))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = await params;
   const body = await request.json();
 
   // Build dynamic update
@@ -37,7 +42,7 @@ export async function PATCH(
   const allowed = [
     "name", "date", "course_id", "tee_name", "gender", "format",
     "status", "max_players", "entry_fee_lari", "rules",
-    "handicap_allowance", "flight_config", "divisions",
+    "handicap_allowance", "flight_config", "divisions", "visibility",
   ];
 
   // Map camelCase to snake_case
@@ -50,11 +55,13 @@ export async function PATCH(
     flightConfig: "flight_config",
   };
 
+  const jsonFields = new Set(["flight_config", "divisions"]);
+
   for (const [key, value] of Object.entries(body)) {
     const dbKey = camelToSnake[key] || key;
     if (allowed.includes(dbKey)) {
       fields.push(dbKey);
-      values.push(dbKey === "flight_config" || dbKey === "divisions" ? JSON.stringify(value) : value);
+      values.push(jsonFields.has(dbKey) ? JSON.stringify(value) : value);
     }
   }
 
@@ -62,7 +69,6 @@ export async function PATCH(
     return Response.json({ error: "No valid fields to update" }, { status: 400 });
   }
 
-  // Build SET clause dynamically since sql template doesn't support dynamic column names
   const setClauses = fields.map((f, i) => `${f} = $${i + 2}`).join(", ");
   const query = `UPDATE tournaments SET ${setClauses}, updated_at = NOW() WHERE id = $1 RETURNING *`;
 
@@ -75,21 +81,23 @@ export async function PATCH(
   return Response.json(mapTournament(rows[0]));
 }
 
-/** DELETE /api/tournaments/[id] — delete tournament and all related data (admin only) */
+/** DELETE /api/tournaments/[id] — delete tournament (admin or creator only) */
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdmin())) {
+  const { id } = await params;
+
+  if (!(await isCreatorOrAdmin(id))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = await params;
-
-  // Delete in order: scores → registrations → teams → tournament
+  // CASCADE handles most cleanup, but scores need manual cleanup
   await sql`DELETE FROM scores WHERE registration_id IN (SELECT id FROM registrations WHERE tournament_id = ${id})`;
   await sql`DELETE FROM registrations WHERE tournament_id = ${id}`;
   await sql`DELETE FROM teams WHERE tournament_id = ${id}`;
+  await sql`DELETE FROM tournament_organizers WHERE tournament_id = ${id}`;
+  await sql`DELETE FROM tournament_invites WHERE tournament_id = ${id}`;
   await sql`DELETE FROM tournaments WHERE id = ${id}`;
 
   return Response.json({ deleted: true });

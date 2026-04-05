@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { sql, initDatabase } from "@/lib/db";
-import { isAdmin } from "@/lib/auth/session";
+import { canManageTournament } from "@/lib/auth/permissions";
 import { mapTeam } from "@/lib/db/mappers";
 
 let dbInitialized = false;
@@ -70,11 +70,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   await ensureDb();
-  if (!(await isAdmin())) {
+  const { id } = await params;
+
+  if (!(await canManageTournament(id))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const { id } = await params;
   const body = await request.json();
   const { name, seed } = body as { name: string; seed?: number };
 

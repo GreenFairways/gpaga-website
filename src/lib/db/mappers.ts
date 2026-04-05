@@ -13,6 +13,8 @@ import type {
   Division,
   Team,
   Match,
+  TournamentOrganizer,
+  TournamentInvite,
 } from "../tournament/types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -34,6 +36,9 @@ export function mapTournament(row: any): Tournament {
     flightConfig: row.flight_config as FlightConfig | null,
     divisions: row.divisions as Division[] | null,
     formatConfig: (row.format_config as FormatConfig) || {},
+    creatorId: row.creator_id || null,
+    tournamentType: row.tournament_type || "official",
+    visibility: row.visibility || "public",
     createdAt: row.created_at?.toISOString?.() || row.created_at,
     updatedAt: row.updated_at?.toISOString?.() || row.updated_at,
   };
@@ -108,6 +113,30 @@ export function mapTeam(row: any): Team {
     teamHandicap: row.team_handicap != null ? parseFloat(row.team_handicap) : null,
     seed: row.seed,
     createdAt: row.created_at?.toISOString?.() || row.created_at,
+  };
+}
+
+export function mapOrganizer(row: any): TournamentOrganizer {
+  return {
+    id: row.id,
+    tournamentId: row.tournament_id,
+    playerId: row.player_id,
+    role: row.role,
+    createdAt: row.created_at?.toISOString?.() || row.created_at,
+  };
+}
+
+export function mapInvite(row: any): TournamentInvite {
+  return {
+    id: row.id,
+    tournamentId: row.tournament_id,
+    invitedPlayerId: row.invited_player_id || null,
+    invitedEmail: row.invited_email || null,
+    inviteCode: row.invite_code,
+    status: row.status,
+    invitedBy: row.invited_by,
+    createdAt: row.created_at?.toISOString?.() || row.created_at,
+    respondedAt: row.responded_at?.toISOString?.() || row.responded_at || null,
   };
 }
 

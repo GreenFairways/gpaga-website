@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { sql } from "@/lib/db";
-import { isAdmin } from "@/lib/auth/session";
+import { canManageTournament } from "@/lib/auth/permissions";
 import { calcScrambleTeamHandicap } from "@/lib/scoring/strategies/scramble";
 
 /** POST /api/tournaments/[id]/teams/[teamId]/members — add player to team */
@@ -8,11 +8,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; teamId: string }> },
 ) {
-  if (!(await isAdmin())) {
+  const { id, teamId } = await params;
+
+  if (!(await canManageTournament(id))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id, teamId } = await params;
   const body = await request.json();
   const { registrationId } = body as { registrationId: string };
 
@@ -45,11 +46,11 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; teamId: string }> },
 ) {
-  if (!(await isAdmin())) {
+  const { id, teamId } = await params;
+
+  if (!(await canManageTournament(id))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const { teamId } = await params;
   const body = await request.json();
   const { registrationId } = body as { registrationId: string };
 

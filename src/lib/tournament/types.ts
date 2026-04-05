@@ -42,6 +42,11 @@ export type TournamentStatus =
   | "completed"
   | "cancelled";
 
+export type TournamentType = "official" | "casual";
+export type TournamentVisibility = "public" | "private" | "unlisted";
+export type OrganizerRole = "creator" | "co_organizer";
+export type InviteStatus = "pending" | "accepted" | "declined" | "expired";
+
 export interface Tournament {
   id: string;
   name: string;
@@ -58,8 +63,31 @@ export interface Tournament {
   flightConfig: FlightConfig | null;
   divisions: Division[] | null;
   formatConfig: FormatConfig;
+  creatorId: string | null;
+  tournamentType: TournamentType;
+  visibility: TournamentVisibility;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TournamentOrganizer {
+  id: string;
+  tournamentId: string;
+  playerId: string;
+  role: OrganizerRole;
+  createdAt: string;
+}
+
+export interface TournamentInvite {
+  id: string;
+  tournamentId: string;
+  invitedPlayerId: string | null;
+  invitedEmail: string | null;
+  inviteCode: string;
+  status: InviteStatus;
+  invitedBy: string;
+  createdAt: string;
+  respondedAt: string | null;
 }
 
 export interface FlightConfig {

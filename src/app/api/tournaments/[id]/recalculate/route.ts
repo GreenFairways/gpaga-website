@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { sql } from "@/lib/db";
-import { isAdmin } from "@/lib/auth/session";
+import { canManageTournament } from "@/lib/auth/permissions";
 import { calcRegistrationHandicap } from "@/lib/tournament/registration";
 import { assignDivision, getTeeForPlayer } from "@/lib/tournament/divisions";
 import { processHoleScore } from "@/lib/tournament/scoring";
@@ -20,11 +20,11 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAdmin())) {
+  const { id: tournamentId } = await params;
+
+  if (!(await canManageTournament(tournamentId))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const { id: tournamentId } = await params;
   try {
   const body = await request.json().catch(() => ({}));
   const filterPlayerIds: string[] | undefined = body.playerIds;

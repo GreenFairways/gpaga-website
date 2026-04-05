@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
 import { sql } from "@/lib/db";
 import { isAdmin } from "@/lib/auth/session";
+import { getAuthenticatedPlayerId } from "@/lib/auth/player-session";
+import { canManageTournament } from "@/lib/auth/permissions";
 import { mapRegistration } from "@/lib/db/mappers";
 import {
   generateAccessCode,
@@ -28,9 +30,10 @@ export async function POST(
 
   // Determine auth mode
   const admin = await isAdmin();
+  const authenticatedPlayerId = await getAuthenticatedPlayerId();
   const { playerId, memberToken } = body;
 
-  if (!admin && !memberToken) {
+  if (!admin && !authenticatedPlayerId && !memberToken) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -43,8 +46,9 @@ export async function POST(
   }
   const tournament = tRows[0];
 
-  // Admin can register regardless of status; members only when open
-  if (!admin && tournament.status !== "registration_open") {
+  // Admin/organizer can register regardless of status; players only when open
+  const organizer = await canManageTournament(tournamentId);
+  if (!admin && !organizer && tournament.status !== "registration_open") {
     return Response.json(
       { error: "Registration is not open for this tournament" },
       { status: 400 },
@@ -63,13 +67,14 @@ export async function POST(
   // 3. Resolve player
   let resolvedPlayerId: string;
 
-  if (admin && playerId) {
-    // Admin mode: register existing player by ID
+  if ((admin || organizer) && playerId) {
+    // Admin/organizer mode: register existing player by ID
     resolvedPlayerId = playerId;
+  } else if (authenticatedPlayerId && !playerId) {
+    // Player self-registration
+    resolvedPlayerId = authenticatedPlayerId;
   } else if (memberToken) {
-    // Member mode: verify token and get player ID
-    // For now, memberToken = player ID (will be replaced with JWT when member auth is built)
-    // Future: verify JWT, extract player ID from claims
+    // Legacy member mode: memberToken = player ID
     resolvedPlayerId = memberToken;
   } else {
     return Response.json(

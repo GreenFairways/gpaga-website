@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { sql } from "@/lib/db";
-import { isAdmin } from "@/lib/auth/session";
+import { canManageTournament } from "@/lib/auth/permissions";
 import { mapTeam } from "@/lib/db/mappers";
 
 /** PATCH /api/tournaments/[id]/teams/[teamId] — update team */
@@ -8,11 +8,12 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; teamId: string }> },
 ) {
-  if (!(await isAdmin())) {
+  const { id, teamId } = await params;
+
+  if (!(await canManageTournament(id))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { teamId } = await params;
   const body = await request.json();
   const { name, seed, teamHandicap } = body as {
     name?: string;
@@ -41,11 +42,11 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string; teamId: string }> },
 ) {
-  if (!(await isAdmin())) {
+  const { id, teamId } = await params;
+
+  if (!(await canManageTournament(id))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const { teamId } = await params;
 
   // Remove team_id from registrations first
   await sql`UPDATE registrations SET team_id = NULL WHERE team_id = ${teamId}`;

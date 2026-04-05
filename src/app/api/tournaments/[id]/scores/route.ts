@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { sql } from "@/lib/db";
-import { isAdmin } from "@/lib/auth/session";
+import { canManageTournament } from "@/lib/auth/permissions";
 import { processHoleScore } from "@/lib/tournament/scoring";
 import { mapScore } from "@/lib/db/mappers";
 import type { TournamentFormat } from "@/lib/tournament/types";
@@ -53,8 +53,8 @@ export async function POST(
     );
   }
 
-  // Determine auth: admin or player with accessCode
-  const admin = await isAdmin();
+  // Determine auth: tournament manager or player with accessCode
+  const admin = await canManageTournament(id);
   let enteredBy: "admin" | "player" = "admin";
 
   if (!admin) {
@@ -126,7 +126,7 @@ export async function PUT(
 ) {
   const { id } = await params;
 
-  if (!(await isAdmin())) {
+  if (!(await canManageTournament(id))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 

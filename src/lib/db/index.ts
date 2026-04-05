@@ -194,6 +194,61 @@ export async function initDatabase(): Promise<void> {
     END $$
   `;
 
+  // ──── Player Auth ────
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE players ADD COLUMN IF NOT EXISTS password_hash VARCHAR(72);
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `;
+
+  // ──── Tournament Ownership & Visibility ────
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS creator_id UUID REFERENCES players(id);
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `;
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS tournament_type VARCHAR(10) DEFAULT 'official';
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `;
+  await sql`
+    DO $$ BEGIN
+      ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS visibility VARCHAR(10) DEFAULT 'public';
+    EXCEPTION WHEN duplicate_column THEN NULL;
+    END $$
+  `;
+
+  // ──── Tournament Organizers ────
+  await sql`
+    CREATE TABLE IF NOT EXISTS tournament_organizers (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+      player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      role VARCHAR(20) NOT NULL DEFAULT 'co_organizer',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(tournament_id, player_id)
+    )
+  `;
+
+  // ──── Tournament Invites ────
+  await sql`
+    CREATE TABLE IF NOT EXISTS tournament_invites (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+      invited_player_id UUID REFERENCES players(id),
+      invited_email VARCHAR(255),
+      invite_code CHAR(8) NOT NULL UNIQUE,
+      status VARCHAR(20) DEFAULT 'pending',
+      invited_by UUID NOT NULL REFERENCES players(id),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      responded_at TIMESTAMPTZ
+    )
+  `;
+
   // ──── Indexes ────
   await sql`CREATE INDEX IF NOT EXISTS idx_reg_tournament ON registrations(tournament_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_reg_player ON registrations(player_id)`;
@@ -202,7 +257,15 @@ export async function initDatabase(): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS idx_scores_team ON scores(team_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_tournaments_status ON tournaments(status)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_tournaments_date ON tournaments(date)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_tournaments_creator ON tournaments(creator_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_tournaments_type ON tournaments(tournament_type)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_tournaments_visibility ON tournaments(visibility)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_teams_tournament ON teams(tournament_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches(tournament_id)`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_players_amgolf_id ON players(amgolf_people_id) WHERE amgolf_people_id IS NOT NULL`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_org_tournament ON tournament_organizers(tournament_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_org_player ON tournament_organizers(player_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_invite_tournament ON tournament_invites(tournament_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_invite_code ON tournament_invites(invite_code)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_invite_player ON tournament_invites(invited_player_id)`;
 }
