@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { sql } from "@/lib/db";
 import { canManageTournament } from "@/lib/auth/permissions";
+import { getAuthenticatedPlayerId } from "@/lib/auth/player-session";
 import { processHoleScore } from "@/lib/tournament/scoring";
 import { mapScore } from "@/lib/db/mappers";
 import type { TournamentFormat } from "@/lib/tournament/types";
@@ -53,22 +54,35 @@ export async function POST(
     );
   }
 
-  // Determine auth: tournament manager or player with accessCode
+  // Determine auth: tournament manager, authenticated player in tournament, or accessCode
   const admin = await canManageTournament(id);
   let enteredBy: "admin" | "player" = "admin";
 
   if (!admin) {
-    if (!accessCode) {
+    const playerId = await getAuthenticatedPlayerId();
+
+    if (playerId) {
+      // Authenticated player: verify they're registered in this tournament
+      const { rows: playerReg } = await sql`
+        SELECT id FROM registrations
+        WHERE tournament_id = ${id} AND player_id = ${playerId} AND status != 'withdrawn'
+      `;
+      if (playerReg.length === 0) {
+        return Response.json({ error: "Not registered in this tournament" }, { status: 403 });
+      }
+      enteredBy = "player";
+    } else if (accessCode) {
+      // Verify access code
+      const { rows: regCheck } = await sql`
+        SELECT access_code FROM registrations WHERE id = ${registrationId}
+      `;
+      if (regCheck.length === 0 || regCheck[0].access_code !== accessCode) {
+        return Response.json({ error: "Invalid access code" }, { status: 401 });
+      }
+      enteredBy = "player";
+    } else {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
-    // Verify access code
-    const { rows: regCheck } = await sql`
-      SELECT access_code FROM registrations WHERE id = ${registrationId}
-    `;
-    if (regCheck.length === 0 || regCheck[0].access_code !== accessCode) {
-      return Response.json({ error: "Invalid access code" }, { status: 401 });
-    }
-    enteredBy = "player";
   }
 
   // Get tournament details for scoring

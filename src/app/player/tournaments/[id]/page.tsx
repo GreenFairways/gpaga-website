@@ -410,12 +410,24 @@ export default function PlayerTournamentPage({
             )}
             {isOrganizer && tournament.status === "in_progress" && (
               <Link
-                href={`/admin/tournaments/${id}/scoring`}
-                className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
+                href={`/player/tournaments/${id}/scoring`}
+                className="mt-3 inline-block rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark"
               >
                 Enter Scores &rarr;
               </Link>
             )}
+          </div>
+        )}
+
+        {/* Enter Scores CTA for any registered player */}
+        {!isOrganizer && tournament.status === "in_progress" && playerId && active.some((r) => r.playerId === playerId) && (
+          <div className="mb-6">
+            <Link
+              href={`/player/tournaments/${id}/scoring`}
+              className="block w-full rounded-xl bg-primary px-4 py-4 text-center text-base font-semibold text-white hover:bg-primary-dark"
+            >
+              Enter Scores &rarr;
+            </Link>
           </div>
         )}
 
